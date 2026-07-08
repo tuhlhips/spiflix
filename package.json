@@ -1,0 +1,15 @@
+{
+  "name": "spiflix",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @spiflix/core dev",
+    "dev:ui": "pnpm --filter @spiflix/ui dev",
+    "build": "pnpm --filter @spiflix/shared build && pnpm --filter @spiflix/core build && pnpm --filter @spiflix/ui build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,json,css}\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

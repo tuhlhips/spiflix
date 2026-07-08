@@ -1,0 +1,82 @@
+import type { FastifyInstance } from 'fastify'
+import { sourceCache } from '../services/cache.js'
+
+/**
+ * Source routes — resolve streaming URLs for movies/TV.
+ *
+ * Flow: TMDB ID → providers scrape in parallel → cache → response.
+ * Cache key is based on TMDB ID + season/episode for TV.
+ */
+export async function sourceRoutes(app: FastifyInstance) {
+  /** GET /v1/movies/:tmdbId — get sources for a movie */
+  app.get('/v1/movies/:tmdbId', async (request, reply) => {
+    const { tmdbId } = request.params as { tmdbId: string }
+    const id = Number(tmdbId)
+    if (isNaN(id)) {
+      return reply.code(400).send({ error: 'Invalid TMDB ID' })
+    }
+
+    const cacheKey = `movie:${id}`
+    const cached = sourceCache.get(cacheKey)
+    if (cached) {
+      reply.header('X-Cache', 'HIT')
+      return cached
+    }
+
+    try {
+      // TODO: resolve title/year from TMDB before passing to providers
+      const result = await app.registry.resolveSources(
+        { tmdbId: id, title: '', imdbId: null, releaseYear: null, type: 'movie' },
+        process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
+      )
+
+      console.log(`[Sources] movie:${id} → ${result.sources.length} sources, ${result.diagnostics.length} diagnostics`)
+      if (result.diagnostics.length > 0) {
+        console.log('[Sources] Diagnostics:', JSON.stringify(result.diagnostics, null, 2))
+      }
+
+      sourceCache.set(cacheKey, result)
+      reply.header('X-Cache', 'MISS')
+      return result
+    } catch (err: any) {
+      request.log.error(err)
+      return reply.code(500).send({ error: 'Failed to resolve sources' })
+    }
+  })
+
+  /** GET /v1/tv/:tmdbId/seasons/:season/episodes/:episode — get sources for a TV episode */
+  app.get('/v1/tv/:tmdbId/seasons/:season/episodes/:episode', async (request, reply) => {
+    const { tmdbId, season, episode } = request.params as {
+      tmdbId: string
+      season: string
+      episode: string
+    }
+    const id = Number(tmdbId)
+    const s = Number(season)
+    const e = Number(episode)
+    if (isNaN(id) || isNaN(s) || isNaN(e)) {
+      return reply.code(400).send({ error: 'Invalid parameters' })
+    }
+
+    const cacheKey = `tv:${id}:s${s}:e${e}`
+    const cached = sourceCache.get(cacheKey)
+    if (cached) {
+      reply.header('X-Cache', 'HIT')
+      return cached
+    }
+
+    try {
+      const result = await app.registry.resolveSources(
+        { tmdbId: id, title: '', imdbId: null, releaseYear: null, type: 'tv', season: s, episode: e },
+        process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
+      )
+
+      sourceCache.set(cacheKey, result)
+      reply.header('X-Cache', 'MISS')
+      return result
+    } catch (err: any) {
+      request.log.error(err)
+      return reply.code(500).send({ error: 'Failed to resolve sources' })
+    }
+  })
+}

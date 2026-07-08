@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: spiflix-core
+    runtime: node
+    plan: free
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter @spiflix/shared build && pnpm --filter @spiflix/core build
+    startCommand: node packages/core/dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TMDB_API_KEY
+        sync: false
+      - key: PORT
+        value: 3000
+      - key: PUBLIC_URL
+        sync: false
