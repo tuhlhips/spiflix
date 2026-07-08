@@ -9,6 +9,9 @@
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write \"packages/**/*.{ts,tsx,json,css}\""
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "engines": {
     "node": ">=20"
   }
