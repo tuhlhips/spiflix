@@ -3,7 +3,7 @@ services:
     name: spiflix-core
     runtime: node
     plan: free
-    buildCommand: npm install -g pnpm@11.5.2 && pnpm install && pnpm --filter @spiflix/shared build && pnpm --filter @spiflix/core build
+    buildCommand: npm install -g pnpm@9 && pnpm install && pnpm --filter @spiflix/shared build && pnpm --filter @spiflix/core build
     startCommand: node packages/core/dist/server.js
     envVars:
       - key: NODE_ENV
