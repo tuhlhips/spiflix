@@ -6,6 +6,7 @@ import { formatTime, cn } from '@/lib/utils'
 import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import { useHistory } from '@/app/providers/history-provider'
 import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
+import { getPreferredSource, isHls, isDash } from '@/utils/playback'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -22,12 +23,7 @@ interface MediaPlayerProps {
   onToggleEpisodes?: () => void
 }
 
-interface Source {
-  url: string
-  type: string
-  quality: string
-  provider: { id: string; name: string }
-}
+import type { Source } from '@/utils/playback'
 
 interface Subtitle {
   url: string
@@ -102,8 +98,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         setAudioTracks(data.sources?.[0]?.audioTracks || [])
         setSelectedSubtitle(null)
         setSelectedAudioTrack(null)
-        if (data.sources?.length > 0) {
-          setSelectedSource(data.sources[0])
+        const preferred = getPreferredSource(data.sources || [])
+        if (preferred) {
+          setSelectedSource(preferred)
         } else {
           setError('No sources available')
         }
@@ -137,7 +134,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     setQualities([])
     setCurrentQuality(-1)
 
-    if (selectedSource.type === 'hls' || url.includes('.m3u8')) {
+    if (isHls(selectedSource)) {
       if (Hls.isSupported()) {
         const hls = new Hls({ enableWorker: true, lowLatencyMode: false })
         hlsRef.current = hls
