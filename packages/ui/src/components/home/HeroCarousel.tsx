@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Play, Star, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
+import { useDrawer } from '@/app/providers/drawer-provider'
 
 interface HeroSlide {
   id: number
@@ -23,6 +24,7 @@ interface HeroCarouselProps {
 
 export function HeroCarousel({ type }: HeroCarouselProps) {
   const navigate = useNavigate()
+  const { open: openDrawer } = useDrawer()
   const [slides, setSlides] = useState<HeroSlide[]>([])
   const [current, setCurrent] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
@@ -132,6 +134,13 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
             >
               <Play className="h-4 w-4 fill-current" />
               Watch Now
+            </button>
+            <button
+              onClick={() => openDrawer({ id: slide.id, type: slide.type })}
+              className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-105"
+            >
+              <Info className="h-4 w-4" />
+              More Info
             </button>
           </div>
         </div>

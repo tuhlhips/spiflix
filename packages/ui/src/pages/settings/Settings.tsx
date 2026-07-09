@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { useHistory } from '@/app/providers/history-provider'
+import { getRegionOptions } from '@/utils/regions'
 import { api } from '@/lib/api'
 
 const themes = [
@@ -40,18 +41,7 @@ const locales = [
   { code: 'zh', label: '中文' },
 ]
 
-const regions = [
-  { code: 'US', label: 'United States' },
-  { code: 'GB', label: 'United Kingdom' },
-  { code: 'CA', label: 'Canada' },
-  { code: 'AU', label: 'Australia' },
-  { code: 'DE', label: 'Germany' },
-  { code: 'FR', label: 'France' },
-  { code: 'JP', label: 'Japan' },
-  { code: 'KR', label: 'South Korea' },
-  { code: 'IN', label: 'India' },
-  { code: 'BR', label: 'Brazil' },
-]
+const regions = getRegionOptions()
 
 type Tab = 'appearance' | 'playback' | 'history' | 'backend' | 'tmdb'
 
@@ -288,7 +278,7 @@ export default function Settings() {
               className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
             >
               {regions.map(r => (
-                <option key={r.code} value={r.code}>{r.label}</option>
+                <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">

@@ -29,7 +29,7 @@ export function TrailerDialog({ videoKey, open, onClose }: TrailerDialogProps) {
           <X className="h-6 w-6" />
         </button>
         <iframe
-          src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&modestbranding=1&rel=0`}
+          src={`https://www.youtube-nocookie.com/embed/${videoKey}?autoplay=1&modestbranding=1&rel=0`}
           className="h-full w-full rounded-lg"
           allow="autoplay; encrypted-media"
           allowFullScreen
