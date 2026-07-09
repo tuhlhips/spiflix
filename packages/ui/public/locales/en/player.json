@@ -1,0 +1,55 @@
+{
+  "controls": {
+    "play": "Play",
+    "pause": "Pause",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "fullscreen": "Enter fullscreen",
+    "exit_fullscreen": "Exit fullscreen",
+    "picture_in_picture": "Picture in Picture",
+    "exit_picture_in_picture": "Exit Picture in Picture",
+    "settings": "Settings",
+    "subtitles": "Subtitles",
+    "audio": "Audio",
+    "quality": "Quality",
+    "speed": "Speed",
+    "style": "Style",
+    "episodes": "Episodes",
+    "previous_episode": "Previous episode",
+    "next_episode": "Next episode",
+    "go_back": "Go back",
+    "play_next": "Play Next",
+    "cancel": "Cancel",
+    "seek": "Seek",
+    "volume": "Volume"
+  },
+  "settings": {
+    "source": "Source",
+    "auto": "Auto",
+    "off": "Off",
+    "no_sources": "No sources",
+    "no_audio_tracks": "No audio tracks available",
+    "no_subtitles": "No subtitles available",
+    "font_size": "Font Size",
+    "color": "Color",
+    "background": "Background",
+    "position": "Position",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large",
+    "xlarge": "X-Large",
+    "none": "None",
+    "low": "Low",
+    "high": "High",
+    "bottom": "Bottom",
+    "top": "Top"
+  },
+  "errors": {
+    "no_sources": "No sources available",
+    "playback_error": "Playback error — try another source",
+    "source_load_failed": "Error loading source"
+  },
+  "states": {
+    "next_episode_soon": "Next episode starting soon..."
+  }
+}

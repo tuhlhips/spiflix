@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Hls from 'hls.js'
 import { api } from '@/lib/api'
@@ -41,6 +42,7 @@ type SettingsTab = 'source' | 'quality' | 'speed' | 'subtitles' | 'audio' | 'cap
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }: MediaPlayerProps) {
+  const { t } = useTranslation('player')
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const hlsRef = useRef<Hls | null>(null)
@@ -102,7 +104,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         if (preferred) {
           setSelectedSource(preferred)
         } else {
-          setError('No sources available')
+          setError(t('errors.no_sources'))
         }
       })
       .catch(err => { if (!cancelled) setError(err.message) })
@@ -179,7 +181,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
               hls.recoverMediaError()
             } else {
-              setError('Playback error — try another source')
+              setError(t('errors.playback_error'))
               hls.destroy()
             }
           }
@@ -423,7 +425,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
               onClick={() => navigate(-1)}
               className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
             >
-              Go Back
+              {t('controls.go_back')}
             </button>
           </div>
         </div>
@@ -433,7 +435,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       {showAutoplay && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
           <div className="text-center space-y-6 w-full max-w-sm px-8">
-            <p className="text-white text-lg font-medium">Next episode starting soon...</p>
+            <p className="text-white text-lg font-medium">{t('states.next_episode_soon')}</p>
 
             {/* Progress bar */}
             <div className="relative h-2 w-full rounded-full bg-white/20 overflow-hidden">
@@ -449,13 +451,13 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                 onClick={handleAutoplayNext}
                 className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Play Next
+                {t('controls.play_next')}
               </button>
               <button
                 onClick={() => { setShowAutoplay(false); clearTimeout(autoplayTimer.current); clearInterval(autoplayInterval.current) }}
                 className="rounded-lg bg-white/10 px-4 py-2.5 text-sm text-white hover:bg-white/20 transition-colors"
               >
-                Cancel
+                {t('controls.cancel')}
               </button>
             </div>
           </div>
@@ -505,7 +507,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={() => navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) - 1}`)}
                     className="text-white/70 hover:text-white"
-                    aria-label="Previous episode"
+                          aria-label={t('controls.previous_episode')}
                   >
                     <SkipBack className="h-5 w-5" />
                   </button>
@@ -515,7 +517,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={() => navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) + 1}`)}
                     className="text-white/70 hover:text-white"
-                    aria-label="Next episode"
+                    aria-label={t('controls.next_episode')}
                   >
                     <SkipForward className="h-5 w-5" />
                   </button>
@@ -553,10 +555,10 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={onToggleEpisodes}
                     className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                    aria-label="Episodes"
+                    aria-label={t('controls.episodes')}
                   >
                     <List className="h-4 w-4" />
-                    Episodes
+                    {t('controls.episodes')}
                   </button>
                 )}
 
@@ -606,7 +608,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                         {settingsTab === 'source' && (
                           <div className="space-y-1">
                             {sources.length === 0 ? (
-                              <p className="text-xs text-white/40 px-2 py-1">No sources</p>
+                              <p className="text-xs text-white/40 px-2 py-1">{t('settings.no_sources')}</p>
                             ) : (
                               (() => {
                                 const grouped = sources.reduce<Record<string, typeof sources>>((acc, s) => {
@@ -660,7 +662,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                               {!selectedSubtitle && <Check className="h-3 w-3" />}
                             </button>
                             {subtitles.length === 0 ? (
-                              <p className="text-xs text-white/40 px-2 py-1">No subtitles available</p>
+                              <p className="text-xs text-white/40 px-2 py-1">{t('settings.no_subtitles')}</p>
                             ) : (
                               subtitles.map((sub, i) => (
                                 <button
