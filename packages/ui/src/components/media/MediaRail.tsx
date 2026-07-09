@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import useEmblaCarousel from 'embla-carousel-react'
 import { MediaCard } from './MediaCard'
-import { cn } from '@/lib/utils'
 
 interface MediaRailProps {
   title: string
@@ -27,22 +27,35 @@ const defaultMapper = (item: any) => ({
 
 export function MediaRail({ title, fetcher, mapper = defaultMapper }: MediaRailProps) {
   const [items, setItems] = useState<any[]>([])
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    dragFree: true,
+    containScroll: 'trimSnaps',
+  })
+  const [canScrollPrev, setCanScrollPrev] = useState(false)
+  const [canScrollNext, setCanScrollNext] = useState(true)
 
   useEffect(() => {
     fetcher().then(setItems).catch(() => {})
   }, [fetcher])
 
-  if (items.length === 0) return null
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (!scrollRef.current) return
-    const amount = scrollRef.current.clientWidth * 0.75
-    scrollRef.current.scrollBy({
-      left: direction === 'left' ? -amount : amount,
-      behavior: 'smooth',
-    })
-  }
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return
+    setCanScrollPrev(emblaApi.canScrollPrev())
+    setCanScrollNext(emblaApi.canScrollNext())
+  }, [emblaApi])
+
+  useEffect(() => {
+    if (!emblaApi) return
+    emblaApi.on('select', onSelect)
+    emblaApi.on('reInit', onSelect)
+    onSelect()
+  }, [emblaApi, onSelect])
+
+  if (items.length === 0) return null
 
   return (
     <section className="py-4">
@@ -50,40 +63,42 @@ export function MediaRail({ title, fetcher, mapper = defaultMapper }: MediaRailP
         <h2 className="text-lg font-semibold">{title}</h2>
         <div className="flex gap-1">
           <button
-            onClick={() => scroll('left')}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+            onClick={scrollPrev}
+            disabled={!canScrollPrev}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:opacity-30"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
-            onClick={() => scroll('right')}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+            onClick={scrollNext}
+            disabled={!canScrollNext}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:opacity-30"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scroll-smooth px-4 sm:px-6 pb-2"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        <style>{`.media-rail-scroll::-webkit-scrollbar { display: none; }`}</style>
-        {items.map((item) => {
-          const mapped = mapper(item)
-          return (
-            <MediaCard
-              key={mapped.id}
-              id={mapped.id}
-              type={mapped.type}
-              title={mapped.title}
-              posterPath={mapped.posterPath}
-              rating={mapped.rating}
-              releaseDate={mapped.releaseDate}
-            />
-          )
-        })}
+      <div className="overflow-hidden px-4 sm:px-6" ref={emblaRef}>
+        <div className="flex gap-3" style={{ backfaceVisibility: 'hidden' }}>
+          {items.map((item) => {
+            const mapped = mapper(item)
+            return (
+              <div key={mapped.id} className="flex-shrink-0 min-w-0" style={{ flex: '0 0 auto', width: '150px' }}>
+                <div className="sm:w-[180px]">
+                  <MediaCard
+                    id={mapped.id}
+                    type={mapped.type}
+                    title={mapped.title}
+                    posterPath={mapped.posterPath}
+                    rating={mapped.rating}
+                    releaseDate={mapped.releaseDate}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
