@@ -10,22 +10,16 @@
     "discover": "Discover",
     "settings": "Settings"
   },
-  "home": {
-    "trendingMovies": "Trending Movies",
-    "trendingTv": "Trending TV Shows",
-    "popularMovies": "Popular Movies",
-    "popularTv": "Popular TV Shows",
-    "topRated": "Top Rated"
-  },
   "search": {
     "placeholder": "Search movies and TV shows...",
     "noResults": "No results found",
-    "noResultsFilter": "No results match this filter",
+    "filterNoResults": "No results match this filter",
     "typeHint": "Type at least 2 characters to search",
     "all": "All",
     "movies": "Movies",
     "tv": "TV",
-    "results": "results"
+    "results": "results",
+    "noResultsFilter": "No results match this filter"
   },
   "player": {
     "noSources": "No sources available",
@@ -35,17 +29,31 @@
     "nextEpisode": "Next episode starting soon...",
     "playNext": "Play Next",
     "cancel": "Cancel",
+    "off": "Off",
+    "auto": "Auto",
+    "noAudioTracks": "No audio tracks available",
+    "noSubtitles": "No subtitles available",
+    "noSources": "No sources",
     "settings": {
       "source": "Source",
-      "quality": "Quality",
-      "speed": "Speed",
       "subtitles": "Subtitles",
       "audio": "Audio",
-      "off": "Off",
-      "auto": "Auto",
-      "noSubtitles": "No subtitles available",
-      "noAudio": "No audio tracks available",
-      "noSources": "No sources"
+      "quality": "Quality",
+      "speed": "Speed",
+      "style": "Style",
+      "fontSize": "Font Size",
+      "color": "Color",
+      "background": "Background",
+      "position": "Position",
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large",
+      "xlarge": "X-Large",
+      "none": "None",
+      "low": "Low",
+      "high": "High",
+      "bottom": "Bottom",
+      "top": "Top"
     }
   },
   "drawer": {
@@ -55,17 +63,14 @@
     "cast": "Cast",
     "recommendations": "Recommendations",
     "noImage": "No image",
-    "noOverview": "No overview"
+    "noOverview": "No overview available",
+    "season": "Season",
+    "ep": "Ep",
+    "grid": "Grid",
+    "list": "List"
   },
   "settings": {
     "title": "Settings",
-    "tabs": {
-      "appearance": "Appearance",
-      "playback": "Playback",
-      "history": "History",
-      "backend": "Backend",
-      "tmdb": "TMDB"
-    },
     "appearance": {
       "theme": "Theme",
       "dark": "Dark",
@@ -84,6 +89,7 @@
       "items": "items"
     },
     "backend": {
+      "title": "Backend",
       "url": "Backend URL",
       "urlPlaceholder": "Leave empty for default",
       "urlDesc": "Custom backend URL. Leave empty to use the default.",
@@ -93,6 +99,7 @@
       "disconnected": "Disconnected"
     },
     "tmdb": {
+      "title": "TMDB",
       "apiKey": "TMDB API Key",
       "configured": "Configured server-side",
       "language": "Language",
@@ -105,7 +112,8 @@
     "pages": "Pages",
     "links": "Links",
     "disclaimer": "Disclaimer",
-    "copyright": "This site does not host any copyrighted content."
+    "copyright": "This site does not host any copyrighted content.",
+    "streamMovies": "Stream movies and TV shows"
   },
   "discover": {
     "title": "Discover",
@@ -124,11 +132,50 @@
     "movie": "Movie",
     "tv": "TV",
     "watchNow": "Watch Now",
-    "noImage": "No Image"
+    "noImage": "No Image",
+    "trendingMovies": "Trending Movies",
+    "trendingTv": "Trending TV Shows",
+    "popularMovies": "Popular Movies",
+    "popularTv": "Popular TV Shows",
+    "topRated": "Top Rated",
+    "trendingNow": "Trending Now",
+    "popular": "Popular",
+    "topRated": "Top Rated"
   },
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong",
     "reload": "Reload Page"
+  },
+  "header": {
+    "connected": "Backend connected",
+    "disconnected": "Backend disconnected",
+    "search": "Search"
+  },
+  "disclaimer": {
+    "title": "Disclaimer",
+    "goBack": "Go back",
+    "p1": "Spiflix does not host any copyrighted content on its servers. All media content displayed on this website is sourced from third-party services and embedded via publicly available streaming links.",
+    "p2": "This website is intended for educational and personal use only. We do not encourage or condone the piracy or unauthorized distribution of copyrighted material.",
+    "p3": "All trademarks, logos, and brand names are the property of their respective owners. Use of these names does not imply endorsement or affiliation.",
+    "p4": "If you believe that any content available through this website infringes upon your copyright, please contact the respective content host directly.",
+    "p5": "This service is provided \"as is\" without any warranty of any kind, express or implied. The operators of this site shall not be held liable for any damages arising from the use of this service."
+  },
+  "home": {
+    "trendingMovies": "Trending Movies",
+    "trendingTv": "Trending TV Shows",
+    "popularMovies": "Popular Movies",
+    "popularTv": "Popular TV Shows",
+    "topRated": "Top Rated"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "reload": "Reload Page"
+  },
+  "movies": {
+    "title": "Movies"
+  },
+  "shows": {
+    "title": "TV Shows"
   }
 }

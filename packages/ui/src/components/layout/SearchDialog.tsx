@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, Film, Tv, Loader2 } from 'lucide-react'
 import { CommandDialog, CommandRoot, CommandInput, CommandList, CommandEmpty, CommandItem, CommandLoading } from 'cmdk'
 import { api } from '@/lib/api'
@@ -25,6 +26,7 @@ interface SearchDialogProps {
 type MediaFilter = 'all' | 'movie' | 'tv'
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -85,7 +87,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder="Search movies and TV shows..."
+              placeholder={t('search.placeholder')}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               autoFocus
             />

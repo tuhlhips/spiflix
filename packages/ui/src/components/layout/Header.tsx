@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Search, Settings, Film, Tv, Compass, Menu, X, Globe } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { SearchDialog } from './SearchDialog'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
@@ -13,6 +14,7 @@ const navLinks = [
 ]
 
 export function Header() {
+  const { t } = useTranslation()
   const location = useLocation()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -58,7 +60,7 @@ export function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-lg font-bold text-primary">
             <Film className="h-6 w-6" />
-            <span className="hidden sm:inline">Spiflix</span>
+            <span className="hidden sm:inline">{t('app.name')}</span>
           </Link>
 
           {/* Desktop nav */}
@@ -84,7 +86,7 @@ export function Header() {
             {/* Backend status */}
             <div
               className="flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1"
-              title={backendOnline ? 'Backend connected' : 'Backend disconnected'}
+              title={backendOnline ? t('header.connected') : t('header.disconnected')}
             >
               <div className={cn('h-1.5 w-1.5 rounded-full', backendOnline ? 'bg-green-500' : 'bg-red-500')} />
               <Globe className="h-3 w-3 text-muted-foreground" />
@@ -95,7 +97,7 @@ export function Header() {
               className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
             >
               <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Search</span>
+              <span className="hidden sm:inline">{t('header.search')}</span>
               <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 text-[10px] font-mono">
                 ⌘F
               </kbd>
