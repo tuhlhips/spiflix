@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { api } from '@/lib/api'
 import { MediaRail } from '@/components/media/MediaRail'
+import { HeroCarousel } from '@/components/home/HeroCarousel'
 
 export default function Shows() {
   const trending = useCallback(() => api.tmdb.trending('tv'), [])
@@ -8,11 +9,13 @@ export default function Shows() {
   const topRated = useCallback(() => api.tmdb.topRated('tv'), [])
 
   return (
-    <div className="py-6">
-      <h1 className="text-2xl font-bold px-4 sm:px-6 mb-4">TV Shows</h1>
-      <MediaRail title="Trending Now" fetcher={trending} />
-      <MediaRail title="Popular" fetcher={popular} />
-      <MediaRail title="Top Rated" fetcher={topRated} />
+    <div>
+      <HeroCarousel type="tv" />
+      <div className="-mt-16 relative z-10 px-0">
+        <MediaRail title="Trending Now" fetcher={trending} />
+        <MediaRail title="Popular" fetcher={popular} />
+        <MediaRail title="Top Rated" fetcher={topRated} />
+      </div>
     </div>
   )
 }
