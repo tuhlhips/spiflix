@@ -2,17 +2,21 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Hls from 'hls.js'
 import { api } from '@/lib/api'
-import { formatTime, getImageUrl, cn } from '@/lib/utils'
+import { formatTime, cn } from '@/lib/utils'
+import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-  Settings, SkipBack, SkipForward, ArrowLeft,
+  Settings, SkipBack, SkipForward, ArrowLeft, List,
+  PictureInPicture, PictureInPicture2, ChevronDown, Subtitles,
 } from 'lucide-react'
+import { CustomSubtitles } from './CustomSubtitles'
 
 interface MediaPlayerProps {
   tmdbId: number
   type: 'movie' | 'tv'
   season?: number
   episode?: number
+  onToggleEpisodes?: () => void
 }
 
 interface Source {
@@ -22,11 +26,27 @@ interface Source {
   provider: { id: string; name: string }
 }
 
-export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps) {
+interface Subtitle {
+  url: string
+  label: string
+  format: string
+}
+
+interface AudioTrack {
+  language: string
+  label: string
+}
+
+type SettingsTab = 'source' | 'quality' | 'speed' | 'subtitles' | 'audio'
+
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
+
+export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }: MediaPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const navigate = useNavigate()
+  const { save: saveProgress, getResumeTime, clear: clearProgress } = usePlaybackProgress(type, tmdbId, season, episode)
 
   const [playing, setPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -35,12 +55,23 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
   const [volume, setVolume] = useState(1)
   const [muted, setMuted] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [isPiP, setIsPiP] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [sources, setSources] = useState<Source[]>([])
   const [selectedSource, setSelectedSource] = useState<Source | null>(null)
   const [title, setTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('source')
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const [qualities, setQualities] = useState<{ index: number; height: number; label: string }[]>([])
+  const [currentQuality, setCurrentQuality] = useState(-1)
+  const [showAutoplay, setShowAutoplay] = useState(false)
+  const autoplayTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [subtitles, setSubtitles] = useState<Subtitle[]>([])
+  const [selectedSubtitle, setSelectedSubtitle] = useState<Subtitle | null>(null)
+  const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
+  const [selectedAudioTrack, setSelectedAudioTrack] = useState<AudioTrack | null>(null)
 
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -48,6 +79,8 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
   useEffect(() => {
     setLoading(true)
     setError(null)
+    setShowAutoplay(false)
+    clearTimeout(autoplayTimer.current)
 
     const fetcher = type === 'movie'
       ? api.sources.movie(tmdbId)
@@ -56,6 +89,10 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
     fetcher
       .then(data => {
         setSources(data.sources || [])
+        setSubtitles(data.subtitles || [])
+        setAudioTracks(data.sources?.[0]?.audioTracks || [])
+        setSelectedSubtitle(null)
+        setSelectedAudioTrack(null)
         if (data.sources?.length > 0) {
           setSelectedSource(data.sources[0])
         } else {
@@ -78,13 +115,14 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
     const video = videoRef.current
     if (!video || !selectedSource) return
 
-    // Destroy previous instance
     if (hlsRef.current) {
       hlsRef.current.destroy()
       hlsRef.current = null
     }
 
     const url = selectedSource.url
+    setQualities([])
+    setCurrentQuality(-1)
 
     if (selectedSource.type === 'hls' || url.includes('.m3u8')) {
       if (Hls.isSupported()) {
@@ -96,7 +134,18 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setLoading(false)
+          if (hls.levels.length > 0) {
+            setQualities(hls.levels.map((l, i) => ({ index: i, height: l.height, label: `${l.height}p` })))
+          }
+          const resume = getResumeTime()
+          if (resume && video.duration > 0) {
+            video.currentTime = resume
+          }
           video.play().catch(() => {})
+        })
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+          setCurrentQuality(data.level)
         })
 
         hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -112,7 +161,6 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
           }
         })
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari native HLS
         video.src = url
       }
     } else {
@@ -122,6 +170,10 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
     return () => { hlsRef.current?.destroy() }
   }, [selectedSource])
 
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.playbackRate = playbackRate
+  }, [playbackRate])
+
   // Video event handlers
   useEffect(() => {
     const video = videoRef.current
@@ -129,15 +181,21 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
 
     const onPlay = () => setPlaying(true)
     const onPause = () => setPlaying(false)
-    const onTimeUpdate = () => setCurrentTime(video.currentTime)
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime)
+      if (Math.floor(video.currentTime) % 10 === 0) {
+        saveProgress(video.currentTime, video.duration)
+      }
+    }
     const onDurationChange = () => setDuration(video.duration)
     const onWaiting = () => setLoading(true)
     const onPlaying = () => setLoading(false)
     const onVolumeChange = () => { setVolume(video.volume); setMuted(video.muted) }
     const onEnded = () => {
-      // Auto-advance for TV shows
-      if (type === 'tv' && season && episode) {
-        navigate(`/watch/tv/${tmdbId}?s=${season}&e=${episode + 1}`)
+      clearProgress()
+      setPlaying(false)
+      if (type === 'tv' && season !== undefined && episode !== undefined) {
+        setShowAutoplay(true)
       }
     }
 
@@ -160,7 +218,20 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
       video.removeEventListener('volumechange', onVolumeChange)
       video.removeEventListener('ended', onEnded)
     }
-  }, [tmdbId, type, season, episode, navigate])
+  }, [tmdbId, type, season, episode])
+
+  const handleAutoplayNext = useCallback(() => {
+    setShowAutoplay(false)
+    clearTimeout(autoplayTimer.current)
+    navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) + 1}`)
+  }, [tmdbId, season, episode, navigate])
+
+  useEffect(() => {
+    if (showAutoplay) {
+      autoplayTimer.current = setTimeout(handleAutoplayNext, 5000)
+      return () => clearTimeout(autoplayTimer.current)
+    }
+  }, [showAutoplay, handleAutoplayNext])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -205,7 +276,6 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Auto-hide controls
   const resetControlsTimer = useCallback(() => {
     setShowControls(true)
     clearTimeout(controlsTimer.current)
@@ -232,12 +302,32 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
     }
   }
 
+  const togglePiP = async () => {
+    const video = videoRef.current
+    if (!video) return
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+        setIsPiP(false)
+      } else {
+        await video.requestPictureInPicture()
+        setIsPiP(true)
+      }
+    } catch {}
+  }
+
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
     const video = videoRef.current
     if (!video) return
     const rect = e.currentTarget.getBoundingClientRect()
     const pct = (e.clientX - rect.left) / rect.width
     video.currentTime = pct * video.duration
+  }
+
+  const handleQualityChange = (level: number) => {
+    if (!hlsRef.current) return
+    hlsRef.current.currentLevel = level
+    setCurrentQuality(level)
   }
 
   return (
@@ -263,10 +353,16 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
         className="h-full w-full object-contain"
         onClick={togglePlay}
         playsInline
+        crossOrigin="anonymous"
       />
 
+      {/* Subtitles overlay */}
+      {selectedSubtitle && (
+        <CustomSubtitles url={selectedSubtitle.url} videoRef={videoRef} />
+      )}
+
       {/* Loading spinner */}
-      {loading && (
+      {loading && !showAutoplay && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="h-12 w-12 animate-spin rounded-full border-3 border-white border-t-transparent" />
         </div>
@@ -287,6 +383,29 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
         </div>
       )}
 
+      {/* Autoplay countdown overlay */}
+      {showAutoplay && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
+          <div className="text-center space-y-4">
+            <p className="text-white text-lg">Next episode starting soon...</p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={handleAutoplayNext}
+                className="rounded-lg bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Play Next
+              </button>
+              <button
+                onClick={() => { setShowAutoplay(false); clearTimeout(autoplayTimer.current) }}
+                className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Controls overlay */}
       {showControls && !error && (
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-transparent to-black/40">
@@ -294,7 +413,7 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
           <div className="absolute top-0 left-0 right-0 p-4">
             <h1 className="text-white text-lg font-medium line-clamp-1">
               {title}
-              {type === 'tv' && season && episode && (
+              {type === 'tv' && season !== undefined && episode !== undefined && (
                 <span className="text-white/60 ml-2">S{season} E{episode}</span>
               )}
             </h1>
@@ -361,34 +480,176 @@ export function MediaPlayer({ tmdbId, type, season, episode }: MediaPlayerProps)
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Source selector */}
-                {sources.length > 1 && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowSettings(!showSettings)}
-                      className="text-white/70 hover:text-white"
-                    >
-                      <Settings className="h-5 w-5" />
-                    </button>
-                    {showSettings && (
-                      <div className="absolute bottom-full right-0 mb-2 w-64 rounded-lg bg-background border border-border p-2 shadow-xl">
-                        <p className="text-xs text-muted-foreground mb-2 px-2">Source</p>
-                        {sources.map((s, i) => (
+                {/* Episode selector for TV */}
+                {type === 'tv' && onToggleEpisodes && (
+                  <button
+                    onClick={onToggleEpisodes}
+                    className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <List className="h-4 w-4" />
+                    Episodes
+                  </button>
+                )}
+
+                {/* Settings (source, quality, speed) */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="text-white/70 hover:text-white"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </button>
+                  {showSettings && (
+                    <div className="absolute bottom-full right-0 mb-2 w-64 rounded-lg bg-background border border-border p-2 shadow-xl">
+                      {/* Tabs */}
+                      <div className="flex gap-1 mb-2 border-b border-border pb-2">
+                        {(['source', 'quality', 'speed', 'subtitles', 'audio'] as SettingsTab[]).map(tab => (
                           <button
-                            key={i}
-                            onClick={() => { setSelectedSource(s); setShowSettings(false) }}
+                            key={tab}
+                            onClick={() => setSettingsTab(tab)}
                             className={cn(
-                              'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                              selectedSource === s ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                              'flex-1 rounded-md px-2 py-1 text-xs font-medium capitalize transition-colors',
+                              settingsTab === tab ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
                             )}
                           >
-                            {s.provider.name} — {s.quality}
+                            {tab}
                           </button>
                         ))}
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Source list */}
+                      {settingsTab === 'source' && (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {sources.length === 0 ? (
+                            <p className="text-xs text-muted-foreground px-2 py-1">No sources</p>
+                          ) : (
+                            sources.map((s, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setSelectedSource(s); setShowSettings(false) }}
+                                className={cn(
+                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                  selectedSource === s ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                )}
+                              >
+                                {s.provider.name} — {s.quality}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {/* Quality list */}
+                      {settingsTab === 'quality' && (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {qualities.length === 0 ? (
+                            <p className="text-xs text-muted-foreground px-2 py-1">Auto (HLS)</p>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleQualityChange(-1)}
+                                className={cn(
+                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                  currentQuality === -1 ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                )}
+                              >
+                                Auto
+                              </button>
+                              {qualities.map(q => (
+                                <button
+                                  key={q.index}
+                                  onClick={() => handleQualityChange(q.index)}
+                                  className={cn(
+                                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                    currentQuality === q.index ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                  )}
+                                >
+                                  {q.label}
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Audio tracks list */}
+                      {settingsTab === 'audio' && (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {audioTracks.length === 0 ? (
+                            <p className="text-xs text-muted-foreground px-2 py-1">No audio tracks available</p>
+                          ) : (
+                            audioTracks.map((track, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
+                                className={cn(
+                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                  selectedAudioTrack === track ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                )}
+                              >
+                                {track.label || track.language}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {/* Subtitles list */}
+                      {settingsTab === 'subtitles' && (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          <button
+                            onClick={() => setSelectedSubtitle(null)}
+                            className={cn(
+                              'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                              !selectedSubtitle ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                            )}
+                          >
+                            Off
+                          </button>
+                          {subtitles.length === 0 ? (
+                            <p className="text-xs text-muted-foreground px-2 py-1">No subtitles available</p>
+                          ) : (
+                            subtitles.map((sub, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setSelectedSubtitle(sub); setShowSettings(false) }}
+                                className={cn(
+                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                  selectedSubtitle === sub ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                )}
+                              >
+                                {sub.label}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {/* Speed list */}
+                      {settingsTab === 'speed' && (
+                        <div className="space-y-1">
+                          {PLAYBACK_RATES.map(rate => (
+                            <button
+                              key={rate}
+                              onClick={() => { setPlaybackRate(rate); setShowSettings(false) }}
+                              className={cn(
+                                'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                playbackRate === rate ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                              )}
+                            >
+                              {rate}x
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Picture in Picture */}
+                <button onClick={togglePiP} className="text-white/70 hover:text-white" title="Picture in Picture">
+                  {isPiP ? <PictureInPicture2 className="h-4 w-4" /> : <PictureInPicture className="h-4 w-4" />}
+                </button>
 
                 <button onClick={toggleFullscreen} className="text-white/70 hover:text-white">
                   {fullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
