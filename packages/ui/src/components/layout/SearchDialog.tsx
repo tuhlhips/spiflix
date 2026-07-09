@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, Film, Tv, X } from 'lucide-react'
+import { Search, Film, Tv, X, Filter } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getImageUrl, cn } from '@/lib/utils'
+import { useDrawer } from '@/app/providers/drawer-provider'
+import { StarRating } from '@/components/ui/StarRating'
 
 interface SearchResult {
   id: number
@@ -21,22 +22,25 @@ interface SearchDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+type MediaFilter = 'all' | 'movie' | 'tv'
+
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+  const [filter, setFilter] = useState<MediaFilter>('all')
+  const { open: openDrawer } = useDrawer()
 
   const search = useCallback(async (q: string) => {
     if (q.length < 2) { setResults([]); return }
     setLoading(true)
     try {
       const data = await api.tmdb.search(q)
-      const all = [
+      const all: SearchResult[] = [
         ...data.movies.map((m: any) => ({ ...m, media_type: 'movie' as const })),
         ...data.tv.map((t: any) => ({ ...t, media_type: 'tv' as const })),
       ]
-      setResults(all.slice(0, 10))
+      setResults(all)
     } catch {
       setResults([])
     } finally {
@@ -53,23 +57,25 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     if (!open) { setQuery(''); setResults([]) }
   }, [open])
 
+  const displayResults = results.filter(r => filter === 'all' || r.media_type === filter)
+
   const handleSelect = (item: SearchResult) => {
     onOpenChange(false)
-    if (item.media_type === 'movie') {
-      navigate(`/watch/movie/${item.id}`)
-    } else {
-      navigate(`/watch/tv/${item.id}?s=1&e=1`)
-    }
+    openDrawer({ id: item.id, type: item.media_type })
   }
+
+  const filters: { key: MediaFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'movie', label: 'Movies' },
+    { key: 'tv', label: 'TV' },
+  ]
 
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
 
-      {/* Dialog */}
       <div className="relative w-full max-w-lg mx-4 rounded-xl border border-border bg-background shadow-2xl">
         {/* Search input */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -91,6 +97,27 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
           </kbd>
         </div>
 
+        {/* Filter tabs */}
+        <div className="flex gap-1 px-3 pt-2 pb-1 border-b border-border">
+          {filters.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                filter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+          {results.length > 0 && (
+            <span className="ml-auto text-[10px] text-muted-foreground self-center">
+              {displayResults.length} results
+            </span>
+          )}
+        </div>
+
         {/* Results */}
         <div className="max-h-[50vh] overflow-y-auto p-2">
           {loading && (
@@ -99,11 +126,13 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
             </div>
           )}
 
-          {!loading && query.length >= 2 && results.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted-foreground">No results found</p>
+          {!loading && query.length >= 2 && displayResults.length === 0 && (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {results.length > 0 ? 'No results match this filter' : 'No results found'}
+            </p>
           )}
 
-          {!loading && results.map((item) => (
+          {!loading && displayResults.map((item) => (
             <button
               key={`${item.media_type}-${item.id}`}
               onClick={() => handleSelect(item)}
@@ -132,7 +161,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                     {item.media_type === 'movie' ? 'Movie' : 'TV'}
                   </span>
                   <span>{(item.release_date || item.first_air_date || '').slice(0, 4)}</span>
-                  {item.vote_average > 0 && <span>★ {item.vote_average.toFixed(1)}</span>}
+                  {item.vote_average > 0 && <StarRating rating={item.vote_average} />}
                 </p>
               </div>
             </button>
