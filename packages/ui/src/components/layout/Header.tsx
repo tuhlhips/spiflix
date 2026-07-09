@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Search, Settings, Film, Tv, Compass, Menu, X } from 'lucide-react'
+import { Search, Settings, Film, Tv, Compass, Menu, X, Globe } from 'lucide-react'
 import { SearchDialog } from './SearchDialog'
 import { cn } from '@/lib/utils'
+import { api } from '@/lib/api'
 
 const navLinks = [
   { to: '/', label: 'Home', icon: Film },
@@ -16,6 +17,15 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [backendOnline, setBackendOnline] = useState(false)
+
+  useEffect(() => {
+    api.health().then(() => setBackendOnline(true)).catch(() => setBackendOnline(false))
+    const interval = setInterval(() => {
+      api.health().then(() => setBackendOnline(true)).catch(() => setBackendOnline(false))
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -71,6 +81,15 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Backend status */}
+            <div
+              className="flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1"
+              title={backendOnline ? 'Backend connected' : 'Backend disconnected'}
+            >
+              <div className={cn('h-1.5 w-1.5 rounded-full', backendOnline ? 'bg-green-500' : 'bg-red-500')} />
+              <Globe className="h-3 w-3 text-muted-foreground" />
+            </div>
+
             <button
               onClick={() => setSearchOpen(true)}
               className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
