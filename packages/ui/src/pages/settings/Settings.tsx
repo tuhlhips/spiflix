@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/app/providers/theme-provider'
 import { usePersistentState } from '@/hooks/useLocalStorage'
 import {
@@ -55,6 +56,7 @@ const regions = [
 type Tab = 'appearance' | 'playback' | 'history' | 'backend' | 'tmdb'
 
 export default function Settings() {
+  const { t } = useTranslation('settings')
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('appearance')
   const { theme, colorTheme, setTheme, setColorTheme } = useTheme()
@@ -70,11 +72,11 @@ export default function Settings() {
   }, [])
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'playback', label: 'Playback', icon: Play },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'backend', label: 'Backend', icon: ExternalLink },
-    { id: 'tmdb', label: 'TMDB', icon: Globe },
+    { id: 'appearance', label: t('tabs.appearance'), icon: Palette },
+    { id: 'playback', label: t('tabs.playback'), icon: Play },
+    { id: 'history', label: t('tabs.history'), icon: History },
+    { id: 'backend', label: t('tabs.backend'), icon: ExternalLink },
+    { id: 'tmdb', label: t('tabs.tmdb'), icon: Globe },
   ]
 
   return (
@@ -83,7 +85,7 @@ export default function Settings() {
         <button onClick={() => navigate(-1)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
       </div>
 
       <div className="flex gap-1 border-b border-border mb-6 overflow-x-auto">
@@ -107,7 +109,7 @@ export default function Settings() {
       {activeTab === 'appearance' && (
         <div className="space-y-8">
           <section>
-            <p className="text-sm text-muted-foreground mb-3">Theme</p>
+            <p className="text-sm text-muted-foreground mb-3">{t('appearance.theme')}</p>
             <div className="flex gap-2 flex-wrap">
               {themes.map(({ id, label, icon: Icon }) => (
                 <button
@@ -126,7 +128,7 @@ export default function Settings() {
           </section>
 
           <section>
-            <p className="text-sm text-muted-foreground mb-3">Accent Color</p>
+            <p className="text-sm text-muted-foreground mb-3">{t('appearance.accent_color')}</p>
             <div className="flex gap-2 flex-wrap">
               {colorThemes.map(({ id, label, color }) => (
                 <button
@@ -153,8 +155,8 @@ export default function Settings() {
         <div className="space-y-6">
           <div className="flex items-center justify-between py-3 border-b border-border">
             <div>
-              <p className="text-sm font-medium">Autoplay Next Episode</p>
-              <p className="text-xs text-muted-foreground">Automatically play the next episode after a 5s countdown</p>
+              <p className="text-sm font-medium">{t('playback.autoplay')}</p>
+              <p className="text-xs text-muted-foreground">{t('playback.autoplay_desc')}</p>
             </div>
             <button
               onClick={() => setAutoplayNext(!autoplayNext)}
@@ -169,20 +171,20 @@ export default function Settings() {
       {activeTab === 'history' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{watchHistory.length} items</p>
+            <p className="text-sm text-muted-foreground">{watchHistory.length} {t('history.items')}</p>
             {watchHistory.length > 0 && (
               <button
                 onClick={clearWatchHistory}
                 className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Clear All
+                {t('history.clear_all')}
               </button>
             )}
           </div>
 
           {watchHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No watch history yet</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t('history.empty')}</p>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {watchHistory.map((item) => {
@@ -200,7 +202,7 @@ export default function Settings() {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{item.title || `#${item.id}`}</p>
-                      <p className="text-xs text-muted-foreground">{item.type === 'movie' ? 'Movie' : 'TV'}</p>
+                      <p className="text-xs text-muted-foreground">{item.type === 'movie' ? t('history.movie') : t('history.tv')}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
@@ -219,34 +221,34 @@ export default function Settings() {
       {activeTab === 'backend' && (
         <div className="space-y-6">
           <div>
-            <p className="text-sm font-medium mb-2">Backend URL</p>
+            <p className="text-sm font-medium mb-2">{t('backend.url')}</p>
             <input
               type="url"
               value={omssUrl}
               onChange={(e) => setOmssUrl(e.target.value)}
-              placeholder="Leave empty for default"
+              placeholder={t('backend.url_placeholder')}
               className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Custom backend URL. Leave empty to use the default.
+              {t('backend.url_desc')}
             </p>
           </div>
 
           <div className="rounded-lg border border-border p-4">
             <p className="text-sm font-medium mb-3 flex items-center gap-2">
               <Server className="h-4 w-4" />
-              Connection Status
+              {t('backend.connection_status')}
             </p>
             {backendOnline === null ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                Checking...
+                {t('backend.checking')}
               </div>
             ) : (
               <div className="flex items-center gap-2 text-sm">
                 <div className={cn('h-2 w-2 rounded-full', backendOnline ? 'bg-green-500' : 'bg-red-500')} />
                 <span className={backendOnline ? 'text-green-500' : 'text-red-500'}>
-                  {backendOnline ? 'Connected' : 'Disconnected'}
+                  {backendOnline ? t('backend.connected') : t('backend.disconnected')}
                 </span>
               </div>
             )}
@@ -257,13 +259,13 @@ export default function Settings() {
       {activeTab === 'tmdb' && (
         <div className="space-y-6">
           <div className="rounded-lg border border-border/50 bg-muted/50 p-4">
-            <p className="text-xs text-muted-foreground mb-1">TMDB API Key</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('tmdb.api_key')}</p>
             <p className="text-sm font-mono">0573•••••••••••••••••••••03b9</p>
-            <p className="text-xs text-muted-foreground mt-1">Configured server-side</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('tmdb.configured')}</p>
           </div>
 
           <div>
-            <p className="text-sm font-medium mb-2">Language</p>
+            <p className="text-sm font-medium mb-2">{t('tmdb.language')}</p>
             <select
               value={locale}
               onChange={(e) => setLocale(e.target.value)}
@@ -274,12 +276,12 @@ export default function Settings() {
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              UI language and TMDB content language
+              {t('tmdb.language_desc')}
             </p>
           </div>
 
           <div>
-            <p className="text-sm font-medium mb-2">Region</p>
+            <p className="text-sm font-medium mb-2">{t('tmdb.region')}</p>
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
@@ -290,7 +292,7 @@ export default function Settings() {
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              Affects TMDB content availability
+              {t('tmdb.region_desc')}
             </p>
           </div>
         </div>

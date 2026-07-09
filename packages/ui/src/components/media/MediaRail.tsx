@@ -6,6 +6,7 @@ import { MediaCard } from './MediaCard'
 interface MediaRailProps {
   title: string
   fetcher: () => Promise<any[]>
+  isLoading?: boolean
   mapper?: (item: any) => {
     id: number
     type: 'movie' | 'tv'
@@ -25,8 +26,9 @@ const defaultMapper = (item: any) => ({
   releaseDate: item.release_date || item.first_air_date,
 })
 
-export function MediaRail({ title, fetcher, mapper = defaultMapper }: MediaRailProps) {
+export function MediaRail({ title, fetcher, isLoading: externalLoading, mapper = defaultMapper }: MediaRailProps) {
   const [items, setItems] = useState<any[]>([])
+  const [internalLoading, setInternalLoading] = useState(true)
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
     dragFree: true,
@@ -36,7 +38,8 @@ export function MediaRail({ title, fetcher, mapper = defaultMapper }: MediaRailP
   const [canScrollNext, setCanScrollNext] = useState(true)
 
   useEffect(() => {
-    fetcher().then(setItems).catch(() => {})
+    setInternalLoading(true)
+    fetcher().then(items => { setItems(items); setInternalLoading(false) }).catch(() => { setInternalLoading(false) })
   }, [fetcher])
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
@@ -55,7 +58,8 @@ export function MediaRail({ title, fetcher, mapper = defaultMapper }: MediaRailP
     onSelect()
   }, [emblaApi, onSelect])
 
-  if (items.length === 0) return null
+  const loading = externalLoading ?? internalLoading
+  if (!loading && items.length === 0) return null
 
   return (
     <section className="py-4">
@@ -79,27 +83,37 @@ export function MediaRail({ title, fetcher, mapper = defaultMapper }: MediaRailP
         </div>
       </div>
 
-      <div className="overflow-hidden px-4 sm:px-6" ref={emblaRef}>
-        <div className="flex gap-3" style={{ backfaceVisibility: 'hidden' }}>
-          {items.map((item) => {
-            const mapped = mapper(item)
-            return (
-              <div key={mapped.id} className="flex-shrink-0 min-w-0" style={{ flex: '0 0 auto', width: '150px' }}>
-                <div className="sm:w-[180px]">
-                  <MediaCard
-                    id={mapped.id}
-                    type={mapped.type}
-                    title={mapped.title}
-                    posterPath={mapped.posterPath}
-                    rating={mapped.rating}
-                    releaseDate={mapped.releaseDate}
-                  />
-                </div>
-              </div>
-            )
-          })}
+      {loading ? (
+        <div className="flex gap-3 overflow-hidden px-4 sm:px-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="w-[150px] sm:w-[180px] shrink-0">
+              <div className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
+            </div>
+          ))}
         </div>
-      </div>
+      ) : (
+        <div className="overflow-hidden px-4 sm:px-6" ref={emblaRef}>
+          <div className="flex gap-3" style={{ backfaceVisibility: 'hidden' }}>
+            {items.map((item) => {
+              const mapped = mapper(item)
+              return (
+                <div key={mapped.id} className="flex-shrink-0 min-w-0" style={{ flex: '0 0 auto', width: '150px' }}>
+                  <div className="sm:w-[180px]">
+                    <MediaCard
+                      id={mapped.id}
+                      type={mapped.type}
+                      title={mapped.title}
+                      posterPath={mapped.posterPath}
+                      rating={mapped.rating}
+                      releaseDate={mapped.releaseDate}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

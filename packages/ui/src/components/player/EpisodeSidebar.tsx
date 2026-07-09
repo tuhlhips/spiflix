@@ -34,6 +34,7 @@ export function EpisodeSidebar({ tmdbId, currentSeason, currentEpisode, seasons,
   const [selectedSeason, setSelectedSeason] = useState(currentSeason)
   const [episodes, setEpisodes] = useState<Episode[]>([])
   const [loading, setLoading] = useState(true)
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     setLoading(true)
@@ -54,9 +55,17 @@ export function EpisodeSidebar({ tmdbId, currentSeason, currentEpisode, seasons,
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-lg font-semibold">Episodes</h2>
-        <button onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
-          <X className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setOrder(o => o === 'asc' ? 'desc' : 'asc')}
+            className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            {order === 'asc' ? 'Newest First' : 'Oldest First'}
+          </button>
+          <button onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {/* Season selector */}
@@ -104,7 +113,7 @@ export function EpisodeSidebar({ tmdbId, currentSeason, currentEpisode, seasons,
           </div>
         ) : (
           <div className="space-y-1 p-3">
-            {episodes.map(ep => {
+            {(order === 'desc' ? [...episodes].reverse() : episodes).map(ep => {
               const isActive = ep.season_number === currentSeason && ep.episode_number === currentEpisode
               return (
                 <button
