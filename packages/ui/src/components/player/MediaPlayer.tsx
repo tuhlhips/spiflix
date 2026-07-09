@@ -390,6 +390,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         <button
           onClick={() => navigate(-1)}
           className="absolute top-4 left-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+          aria-label="Go back"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -483,6 +484,12 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             <div
               onClick={seek}
               className="group relative h-1.5 w-full cursor-pointer rounded-full bg-white/20 transition-all hover:h-2.5"
+              role="slider"
+              aria-label="Seek"
+              aria-valuemin={0}
+              aria-valuemax={Math.round(duration)}
+              aria-valuenow={Math.round(currentTime)}
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
             >
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-primary"
@@ -493,7 +500,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             {/* Control buttons */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <button onClick={togglePlay} className="text-white hover:text-white/80">
+                <button onClick={togglePlay} className="text-white hover:text-white/80" aria-label={playing ? 'Pause' : 'Play'} aria-pressed={playing}>
                   {playing ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 fill-current" />}
                 </button>
 
@@ -501,6 +508,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={() => navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) - 1}`)}
                     className="text-white/70 hover:text-white"
+                    aria-label="Previous episode"
                   >
                     <SkipBack className="h-5 w-5" />
                   </button>
@@ -510,13 +518,14 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={() => navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) + 1}`)}
                     className="text-white/70 hover:text-white"
+                    aria-label="Next episode"
                   >
                     <SkipForward className="h-5 w-5" />
                   </button>
                 )}
 
                 {/* Volume */}
-                <button onClick={() => videoRef.current && (videoRef.current.muted = !videoRef.current.muted)} className="text-white/70 hover:text-white">
+                <button onClick={() => videoRef.current && (videoRef.current.muted = !videoRef.current.muted)} className="text-white/70 hover:text-white" aria-label={muted ? 'Unmute' : 'Mute'} aria-pressed={muted}>
                   {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                 </button>
                 <input
@@ -530,6 +539,10 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                     if (videoRef.current) { videoRef.current.volume = v; videoRef.current.muted = v === 0 }
                   }}
                   className="w-20 accent-primary"
+                  aria-label="Volume"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round((muted ? 0 : volume) * 100)}
                 />
 
                 <span className="text-xs text-white/70 ml-2">
@@ -543,6 +556,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={onToggleEpisodes}
                     className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    aria-label="Episodes"
                   >
                     <List className="h-4 w-4" />
                     Episodes
@@ -554,12 +568,15 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   <button
                     onClick={() => setShowSettings(!showSettings)}
                     className="text-white/70 hover:text-white"
+                    aria-label="Settings"
+                    aria-haspopup="true"
+                    aria-expanded={showSettings}
                   >
                     <Settings className="h-5 w-5" />
                   </button>
 
                   {showSettings && (
-                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-black/90 backdrop-blur-xl border border-white/10 shadow-xl max-h-[70vh] flex flex-col">
+                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-black/90 backdrop-blur-xl border border-white/10 shadow-xl max-h-[70vh] flex flex-col" role="menu">
                       {/* Tab bar */}
                       <div className="flex border-b border-white/10">
                         {([
@@ -813,11 +830,21 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                 </div>
 
                 {/* Picture in Picture */}
-                <button onClick={togglePiP} className="text-white/70 hover:text-white" title="Picture in Picture">
+                <button
+                  onClick={togglePiP}
+                  className="text-white/70 hover:text-white"
+                  aria-label={isPiP ? 'Exit Picture in Picture' : 'Picture in Picture'}
+                  aria-pressed={isPiP}
+                >
                   {isPiP ? <PictureInPicture2 className="h-4 w-4" /> : <PictureInPicture className="h-4 w-4" />}
                 </button>
 
-                <button onClick={toggleFullscreen} className="text-white/70 hover:text-white">
+                <button
+                  onClick={toggleFullscreen}
+                  className="text-white/70 hover:text-white"
+                  aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                  aria-pressed={fullscreen}
+                >
                   {fullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                 </button>
               </div>
