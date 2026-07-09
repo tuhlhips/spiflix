@@ -10,6 +10,7 @@ import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
   PictureInPicture, PictureInPicture2, ChevronDown, Subtitles,
+  HardDrive, Captions, Gauge, Clapperboard, Check,
 } from 'lucide-react'
 import { CustomSubtitles } from './CustomSubtitles'
 
@@ -542,7 +543,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   </button>
                 )}
 
-                {/* Settings (source, quality, speed) */}
+                {/* Settings popover */}
                 <div className="relative">
                   <button
                     onClick={() => setShowSettings(!showSettings)}
@@ -550,31 +551,42 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   >
                     <Settings className="h-5 w-5" />
                   </button>
+
                   {showSettings && (
-                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-background/95 backdrop-blur-xl border border-border shadow-xl max-h-[70vh] flex flex-col">
-                      {/* Tabs */}
-                      <div className="flex flex-wrap gap-0.5 p-2 border-b border-border">
-                        {(['source', 'quality', 'speed', 'subtitles', 'audio', 'captions'] as SettingsTab[]).map(tab => (
+                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-black/90 backdrop-blur-xl border border-white/10 shadow-xl max-h-[70vh] flex flex-col">
+                      {/* Tab bar */}
+                      <div className="flex border-b border-white/10">
+                        {([
+                          { id: 'source' as SettingsTab, icon: HardDrive },
+                          { id: 'subtitles' as SettingsTab, icon: Captions },
+                          { id: 'audio' as SettingsTab, icon: Volume2 },
+                          { id: 'quality' as SettingsTab, icon: Clapperboard },
+                          { id: 'speed' as SettingsTab, icon: Gauge },
+                          { id: 'captions' as SettingsTab, icon: Subtitles },
+                        ]).map(({ id, icon: Icon }) => (
                           <button
-                            key={tab}
-                            onClick={() => setSettingsTab(tab)}
+                            key={id}
+                            onClick={() => setSettingsTab(id)}
                             className={cn(
-                              'rounded-md px-2 py-1 text-[10px] font-medium capitalize transition-colors',
-                              settingsTab === tab ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
+                              'flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
+                              settingsTab === id
+                                ? 'text-white bg-white/10'
+                                : 'text-white/50 hover:text-white/80',
                             )}
                           >
-                            {tab === 'captions' ? 'Style' : tab}
+                            <Icon className="h-3.5 w-3.5" />
+                            {id === 'captions' ? 'Style' : id}
                           </button>
                         ))}
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 overflow-y-auto p-2 min-h-0">
-                        {/* Source list */}
+                      <div className="flex-1 overflow-y-auto p-2 min-h-0 max-h-64">
+                        {/* Source */}
                         {settingsTab === 'source' && (
                           <div className="space-y-1">
                             {sources.length === 0 ? (
-                              <p className="text-xs text-muted-foreground px-2 py-1">No sources</p>
+                              <p className="text-xs text-white/40 px-2 py-1">No sources</p>
                             ) : (
                               (() => {
                                 const grouped = sources.reduce<Record<string, typeof sources>>((acc, s) => {
@@ -585,21 +597,27 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                 }, {})
                                 return Object.entries(grouped).map(([provider, providerSources]) => (
                                   <div key={provider} className="mb-3 last:mb-0">
-                                    <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{provider}</div>
-                                    <div className="mt-1 space-y-0.5">
-                                      {providerSources.map((s, i) => (
-                                        <button
-                                          key={`${s.provider.id}-${i}`}
-                                          onClick={() => { setSelectedSource(s); setShowSettings(false) }}
-                                          className={cn(
-                                            'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                            selectedSource === s ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                          )}
-                                        >
-                                          <span className="font-medium">Source {i + 1}</span>
-                                          <span className="ml-1.5 text-xs text-muted-foreground">{s.quality}</span>
-                                        </button>
-                                      ))}
+                                    <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">{provider}</div>
+                                    <div className="mt-0.5 space-y-0.5">
+                                      {providerSources.map((s, i) => {
+                                        const isSelected = selectedSource === s
+                                        return (
+                                          <button
+                                            key={`${s.provider.id}-${i}`}
+                                            onClick={() => { setSelectedSource(s); setShowSettings(false) }}
+                                            className={cn(
+                                              'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                                              isSelected ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
+                                            )}
+                                          >
+                                            <span>
+                                              <span className="font-medium">Source {i + 1}</span>
+                                              <span className="ml-1.5 text-white/40">{s.quality}</span>
+                                            </span>
+                                            {isSelected && <Check className="h-3 w-3" />}
+                                          </button>
+                                        )
+                                      })}
                                     </div>
                                   </div>
                                 ))
@@ -608,118 +626,123 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                           </div>
                         )}
 
-                        {/* Quality list */}
-                        {settingsTab === 'quality' && (
-                          <div className="space-y-1">
-                            <button
-                              onClick={() => handleQualityChange(-1)}
-                              className={cn(
-                                'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                currentQuality === -1 ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                              )}
-                            >
-                              Auto
-                            </button>
-                            {qualities.map(q => (
-                              <button
-                                key={q.index}
-                                onClick={() => handleQualityChange(q.index)}
-                                className={cn(
-                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                  currentQuality === q.index ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                )}
-                              >
-                                {q.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Audio tracks list */}
-                        {settingsTab === 'audio' && (
-                          <div className="space-y-1">
-                            {audioTracks.length === 0 ? (
-                              <p className="text-xs text-muted-foreground px-2 py-1">No audio tracks available</p>
-                            ) : (
-                              audioTracks.map((track, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
-                                  className={cn(
-                                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                    selectedAudioTrack === track ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                  )}
-                                >
-                                  {track.label || track.language}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        )}
-
-                        {/* Subtitles list */}
+                        {/* Subtitles */}
                         {settingsTab === 'subtitles' && (
-                          <div className="space-y-1">
+                          <div className="space-y-0.5">
                             <button
                               onClick={() => setSelectedSubtitle(null)}
                               className={cn(
-                                'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                !selectedSubtitle ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                !selectedSubtitle ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                               )}
                             >
-                              Off
+                              <span>Off</span>
+                              {!selectedSubtitle && <Check className="h-3 w-3" />}
                             </button>
                             {subtitles.length === 0 ? (
-                              <p className="text-xs text-muted-foreground px-2 py-1">No subtitles available</p>
+                              <p className="text-xs text-white/40 px-2 py-1">No subtitles available</p>
                             ) : (
                               subtitles.map((sub, i) => (
                                 <button
                                   key={i}
                                   onClick={() => { setSelectedSubtitle(sub); setShowSettings(false) }}
                                   className={cn(
-                                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                    selectedSubtitle === sub ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                    'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                    selectedSubtitle === sub ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                                   )}
                                 >
-                                  {sub.label}
+                                  <span>{sub.label}</span>
+                                  {selectedSubtitle === sub && <Check className="h-3 w-3" />}
                                 </button>
                               ))
                             )}
                           </div>
                         )}
 
-                        {/* Speed list */}
-                        {settingsTab === 'speed' && (
-                          <div className="space-y-1">
-                            {PLAYBACK_RATES.map(rate => (
+                        {/* Audio */}
+                        {settingsTab === 'audio' && (
+                          <div className="space-y-0.5">
+                            {audioTracks.length === 0 ? (
+                              <p className="text-xs text-white/40 px-2 py-1">No audio tracks available</p>
+                            ) : (
+                              audioTracks.map((track, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
+                                  className={cn(
+                                    'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                    selectedAudioTrack === track ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
+                                  )}
+                                >
+                                  <span>{track.label || track.language}</span>
+                                  {selectedAudioTrack === track && <Check className="h-3 w-3" />}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+
+                        {/* Quality */}
+                        {settingsTab === 'quality' && (
+                          <div className="space-y-0.5">
+                            <button
+                              onClick={() => handleQualityChange(-1)}
+                              className={cn(
+                                'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                currentQuality === -1 ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
+                              )}
+                            >
+                              <span>Auto</span>
+                              {currentQuality === -1 && <Check className="h-3 w-3" />}
+                            </button>
+                            {qualities.map(q => (
                               <button
-                                key={rate}
-                                onClick={() => { setPlaybackRate(rate); setShowSettings(false) }}
+                                key={q.index}
+                                onClick={() => handleQualityChange(q.index)}
                                 className={cn(
-                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                  playbackRate === rate ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                  'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                  currentQuality === q.index ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                                 )}
                               >
-                                {rate}x
+                                <span>{q.label}</span>
+                                {currentQuality === q.index && <Check className="h-3 w-3" />}
                               </button>
                             ))}
                           </div>
                         )}
 
-                        {/* Captions style (subtitle customization) */}
+                        {/* Speed */}
+                        {settingsTab === 'speed' && (
+                          <div className="space-y-0.5">
+                            {PLAYBACK_RATES.map(rate => (
+                              <button
+                                key={rate}
+                                onClick={() => { setPlaybackRate(rate); setShowSettings(false) }}
+                                className={cn(
+                                  'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                  playbackRate === rate ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
+                                )}
+                              >
+                                <span>{rate}x</span>
+                                {playbackRate === rate && <Check className="h-3 w-3" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Captions style */}
                         {settingsTab === 'captions' && (
-                          <div className="space-y-4">
-                            {/* Font size */}
+                          <div className="space-y-4 p-1">
                             <div>
-                              <p className="text-xs text-muted-foreground mb-2">Font Size</p>
+                              <p className="text-[10px] text-white/40 mb-1.5 uppercase tracking-wider">Font Size</p>
                               <div className="flex gap-1">
                                 {FONT_SIZES.map(f => (
                                   <button
                                     key={f.value}
                                     onClick={() => setSubSettings({ ...subSettings, fontSize: f.value })}
                                     className={cn(
-                                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-                                      subSettings.fontSize === f.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                                      'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                                      subSettings.fontSize === f.value ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                                     )}
                                   >
                                     {f.label}
@@ -727,19 +750,14 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                 ))}
                               </div>
                             </div>
-
-                            {/* Color */}
                             <div>
-                              <p className="text-xs text-muted-foreground mb-2">Color</p>
+                              <p className="text-[10px] text-white/40 mb-1.5 uppercase tracking-wider">Color</p>
                               <div className="flex gap-2">
                                 {COLORS.map(c => (
                                   <button
                                     key={c.value}
                                     onClick={() => setSubSettings({ ...subSettings, color: c.value })}
-                                    className={cn(
-                                      'h-7 w-7 rounded-full ring-offset-2 ring-offset-background transition-all',
-                                      subSettings.color === c.value ? 'ring-2 ring-primary scale-110' : '',
-                                    )}
+                                    className={cn('h-6 w-6 rounded-full ring-offset-2 ring-offset-black transition-all', subSettings.color === c.value ? 'ring-2 ring-white scale-110' : '')}
                                     title={c.label}
                                   >
                                     <div className={cn('h-full w-full rounded-full', c.swatch)} />
@@ -747,18 +765,16 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                 ))}
                               </div>
                             </div>
-
-                            {/* Background opacity */}
                             <div>
-                              <p className="text-xs text-muted-foreground mb-2">Background</p>
+                              <p className="text-[10px] text-white/40 mb-1.5 uppercase tracking-wider">Background</p>
                               <div className="flex gap-1">
                                 {BG_OPACITIES.map(b => (
                                   <button
                                     key={b.value}
                                     onClick={() => setSubSettings({ ...subSettings, bgOpacity: b.value })}
                                     className={cn(
-                                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-                                      subSettings.bgOpacity === b.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                                      'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                                      subSettings.bgOpacity === b.value ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                                     )}
                                   >
                                     {b.label}
@@ -766,18 +782,16 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                 ))}
                               </div>
                             </div>
-
-                            {/* Position */}
                             <div>
-                              <p className="text-xs text-muted-foreground mb-2">Position</p>
+                              <p className="text-[10px] text-white/40 mb-1.5 uppercase tracking-wider">Position</p>
                               <div className="flex gap-1">
                                 {POSITIONS.map(p => (
                                   <button
                                     key={p.value}
                                     onClick={() => setSubSettings({ ...subSettings, position: p.value })}
                                     className={cn(
-                                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-                                      subSettings.position === p.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                                      'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                                      subSettings.position === p.value ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                                     )}
                                   >
                                     {p.label}
