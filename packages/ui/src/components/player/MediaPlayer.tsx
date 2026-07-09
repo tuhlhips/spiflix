@@ -67,7 +67,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [qualities, setQualities] = useState<{ index: number; height: number; label: string }[]>([])
   const [currentQuality, setCurrentQuality] = useState(-1)
   const [showAutoplay, setShowAutoplay] = useState(false)
+  const [autoplayCountdown, setAutoplayCountdown] = useState(5)
   const autoplayTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const autoplayInterval = useRef<ReturnType<typeof setInterval>>(undefined)
   const [subtitles, setSubtitles] = useState<Subtitle[]>([])
   const [selectedSubtitle, setSelectedSubtitle] = useState<Subtitle | null>(null)
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
@@ -228,8 +230,15 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
   useEffect(() => {
     if (showAutoplay) {
+      setAutoplayCountdown(5)
       autoplayTimer.current = setTimeout(handleAutoplayNext, 5000)
-      return () => clearTimeout(autoplayTimer.current)
+      autoplayInterval.current = setInterval(() => {
+        setAutoplayCountdown(p => Math.max(0, p - 1))
+      }, 1000)
+      return () => {
+        clearTimeout(autoplayTimer.current)
+        clearInterval(autoplayInterval.current)
+      }
     }
   }, [showAutoplay, handleAutoplayNext])
 
@@ -386,18 +395,28 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       {/* Autoplay countdown overlay */}
       {showAutoplay && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
-          <div className="text-center space-y-4">
-            <p className="text-white text-lg">Next episode starting soon...</p>
-            <div className="flex items-center justify-center gap-2">
+          <div className="text-center space-y-6 w-full max-w-sm px-8">
+            <p className="text-white text-lg font-medium">Next episode starting soon...</p>
+
+            {/* Progress bar */}
+            <div className="relative h-2 w-full rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-1000 ease-linear"
+                style={{ width: `${(autoplayCountdown / 5) * 100}%` }}
+              />
+            </div>
+            <p className="text-white/60 text-sm">{autoplayCountdown}s</p>
+
+            <div className="flex items-center justify-center gap-3">
               <button
                 onClick={handleAutoplayNext}
-                className="rounded-lg bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Play Next
               </button>
               <button
-                onClick={() => { setShowAutoplay(false); clearTimeout(autoplayTimer.current) }}
-                className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+                onClick={() => { setShowAutoplay(false); clearTimeout(autoplayTimer.current); clearInterval(autoplayInterval.current) }}
+                className="rounded-lg bg-white/10 px-4 py-2.5 text-sm text-white hover:bg-white/20 transition-colors"
               >
                 Cancel
               </button>
