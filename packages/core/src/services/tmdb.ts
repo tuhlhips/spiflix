@@ -94,92 +94,94 @@ class TmdbService {
   }
 
   /** Get trending movies */
-  async trending(timeWindow: 'day' | 'week' = 'week'): Promise<TmdbMovie[]> {
-    const data = await this.fetch<TmdbResponse<TmdbMovie>>(`/trending/movie/${timeWindow}`)
+  async trending(timeWindow: 'day' | 'week' = 'week', language = 'en-US'): Promise<TmdbMovie[]> {
+    const data = await this.fetch<TmdbResponse<TmdbMovie>>(`/trending/movie/${timeWindow}`, { language })
     return data.results
   }
 
   /** Get trending TV shows */
-  async trendingTv(timeWindow: 'day' | 'week' = 'week'): Promise<TmdbTv[]> {
-    const data = await this.fetch<TmdbResponse<TmdbTv>>(`/trending/tv/${timeWindow}`)
+  async trendingTv(timeWindow: 'day' | 'week' = 'week', language = 'en-US'): Promise<TmdbTv[]> {
+    const data = await this.fetch<TmdbResponse<TmdbTv>>(`/trending/tv/${timeWindow}`, { language })
     return data.results
   }
 
   /** Get popular movies */
-  async popularMovies(page = 1): Promise<TmdbMovie[]> {
-    const data = await this.fetch<TmdbResponse<TmdbMovie>>('/movie/popular', { page: String(page) })
+  async popularMovies(page = 1, language = 'en-US', region = 'US'): Promise<TmdbMovie[]> {
+    const data = await this.fetch<TmdbResponse<TmdbMovie>>('/movie/popular', { page: String(page), language, region })
     return data.results
   }
 
   /** Get popular TV shows */
-  async popularTv(page = 1): Promise<TmdbTv[]> {
-    const data = await this.fetch<TmdbResponse<TmdbTv>>('/tv/popular', { page: String(page) })
+  async popularTv(page = 1, language = 'en-US'): Promise<TmdbTv[]> {
+    const data = await this.fetch<TmdbResponse<TmdbTv>>('/tv/popular', { page: String(page), language })
     return data.results
   }
 
   /** Get top-rated movies */
-  async topRatedMovies(page = 1): Promise<TmdbMovie[]> {
-    const data = await this.fetch<TmdbResponse<TmdbMovie>>('/movie/top_rated', { page: String(page) })
+  async topRatedMovies(page = 1, language = 'en-US'): Promise<TmdbMovie[]> {
+    const data = await this.fetch<TmdbResponse<TmdbMovie>>('/movie/top_rated', { page: String(page), language })
     return data.results
   }
 
   /** Get top-rated TV shows */
-  async topRatedTv(page = 1): Promise<TmdbTv[]> {
-    const data = await this.fetch<TmdbResponse<TmdbTv>>('/tv/top_rated', { page: String(page) })
+  async topRatedTv(page = 1, language = 'en-US'): Promise<TmdbTv[]> {
+    const data = await this.fetch<TmdbResponse<TmdbTv>>('/tv/top_rated', { page: String(page), language })
     return data.results
   }
 
   /** Get movies by genre */
-  async moviesByGenre(genreId: number, page = 1): Promise<TmdbMovie[]> {
+  async moviesByGenre(genreId: number, page = 1, language = 'en-US'): Promise<TmdbMovie[]> {
     const data = await this.fetch<TmdbResponse<TmdbMovie>>('/discover/movie', {
       with_genres: String(genreId),
       page: String(page),
+      language,
     })
     return data.results
   }
 
   /** Get TV shows by genre */
-  async tvByGenre(genreId: number, page = 1): Promise<TmdbTv[]> {
+  async tvByGenre(genreId: number, page = 1, language = 'en-US'): Promise<TmdbTv[]> {
     const data = await this.fetch<TmdbResponse<TmdbTv>>('/discover/tv', {
       with_genres: String(genreId),
       page: String(page),
+      language,
     })
     return data.results
   }
 
   /** Search movies and TV shows */
-  async search(query: string, page = 1): Promise<{ movies: TmdbMovie[]; tv: TmdbTv[] }> {
+  async search(query: string, page = 1, language = 'en-US'): Promise<{ movies: TmdbMovie[]; tv: TmdbTv[] }> {
     const [movieData, tvData] = await Promise.all([
-      this.fetch<TmdbResponse<TmdbMovie>>('/search/movie', { query, page: String(page) }),
-      this.fetch<TmdbResponse<TmdbTv>>('/search/tv', { query, page: String(page) }),
+      this.fetch<TmdbResponse<TmdbMovie>>('/search/movie', { query, page: String(page), language }),
+      this.fetch<TmdbResponse<TmdbTv>>('/search/tv', { query, page: String(page), language }),
     ])
     return { movies: movieData.results, tv: tvData.results }
   }
 
   /** Get movie details */
-  async movieDetails(id: number): Promise<TmdbMediaDetail> {
-    return this.fetch<TmdbMediaDetail>(`/movie/${id}`)
+  async movieDetails(id: number, language = 'en-US'): Promise<TmdbMediaDetail> {
+    return this.fetch<TmdbMediaDetail>(`/movie/${id}`, { append_to_response: 'videos,credits,recommendations,images', language })
   }
 
   /** Get TV show details */
-  async tvDetails(id: number): Promise<TmdbMediaDetail> {
-    return this.fetch<TmdbMediaDetail>(`/tv/${id}`)
+  async tvDetails(id: number, language = 'en-US'): Promise<TmdbMediaDetail> {
+    return this.fetch<TmdbMediaDetail>(`/tv/${id}`, { append_to_response: 'videos,credits,recommendations,images', language })
   }
 
   /** Get season details for a TV show */
-  async seasonDetails(tvId: number, seasonNumber: number) {
-    return this.fetch(`/tv/${tvId}/season/${seasonNumber}`)
+  async seasonDetails(tvId: number, seasonNumber: number, language = 'en-US') {
+    return this.fetch(`/tv/${tvId}/season/${seasonNumber}`, { language })
   }
 
   /** Get movie genres */
-  async movieGenres(): Promise<{ id: number; name: string }[]> {
-    const data = await this.fetch<{ genres: { id: number; name: string }[] }>('/genre/movie/list')
+  async movieGenres(language = 'en-US'): Promise<{ id: number; name: string }[]> {
+    const data = await this.fetch<{ genres: { id: number; name: string }[] }>('/genre/movie/list', { language })
     return data.genres
   }
 
   /** Get TV genres */
-  async tvGenres(): Promise<{ id: number; name: string }[]> {
-    const data = await this.fetch<{ genres: { id: number; name: string }[] }>('/genre/tv/list')
+  async tvGenres(language = 'en-US'): Promise<{ id: number; name: string }[]> {
+    const data = await this.fetch<{ genres: { id: number; name: string }[] }>('/genre/tv/list', { language })
     return data.genres
   }
 

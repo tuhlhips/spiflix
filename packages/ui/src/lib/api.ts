@@ -1,18 +1,19 @@
-/**
- * Typed API client — all backend communication goes through here.
- *
- * Design: Single source of truth for API calls. Components never
- * call fetch() directly. This enables:
- * - Centralized error handling
- * - Request deduplication
- * - Easy backend URL switching
- * - Type safety for all responses
- */
-
 const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '')
 
+function getLang(): string {
+  try { return localStorage.getItem('spiflix-locale') || 'en-US' } catch { return 'en-US' }
+}
+
+function getRegion(): string {
+  try { return localStorage.getItem('spiflix-region') || 'US' } catch { return 'US' }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin)
+  if (!url.searchParams.has('language')) url.searchParams.set('language', getLang())
+  if (!url.searchParams.has('region')) url.searchParams.set('region', getRegion())
+
+  const res = await fetch(url.toString(), {
     ...init,
     headers: {
       'Content-Type': 'application/json',

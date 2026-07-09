@@ -8,13 +8,21 @@ import { tmdb } from '../services/tmdb.js'
  * server-side, avoids CORS issues, allows caching.
  */
 export async function tmdbRoutes(app: FastifyInstance) {
+  function getLang(request: any): string {
+    return (request.query as any).language || 'en-US'
+  }
+
+  function getRegion(request: any): string {
+    return (request.query as any).region || 'US'
+  }
+
   /** GET /api/tmdb/search?q=... — search movies and TV */
   app.get('/api/tmdb/search', async (request, reply) => {
     const { q, page } = request.query as { q?: string; page?: string }
     if (!q) return reply.code(400).send({ error: 'Missing query' })
 
     try {
-      const results = await tmdb.search(q, Number(page) || 1)
+      const results = await tmdb.search(q, Number(page) || 1, getLang(request))
       return results
     } catch (err: any) {
       request.log.error(err)
@@ -31,8 +39,8 @@ export async function tmdbRoutes(app: FastifyInstance) {
 
     try {
       const results = mediaType === 'movie'
-        ? await tmdb.trending()
-        : await tmdb.trendingTv()
+        ? await tmdb.trending('week', getLang(request))
+        : await tmdb.trendingTv('week', getLang(request))
       return results
     } catch (err: any) {
       console.error('[TMDB] trending error:', err.message, err.stack)
@@ -50,8 +58,8 @@ export async function tmdbRoutes(app: FastifyInstance) {
 
     try {
       const results = mediaType === 'movie'
-        ? await tmdb.popularMovies(Number(page) || 1)
-        : await tmdb.popularTv(Number(page) || 1)
+        ? await tmdb.popularMovies(Number(page) || 1, getLang(request), getRegion(request))
+        : await tmdb.popularTv(Number(page) || 1, getLang(request))
       return results
     } catch (err: any) {
       request.log.error(err)
@@ -69,8 +77,8 @@ export async function tmdbRoutes(app: FastifyInstance) {
 
     try {
       const results = mediaType === 'movie'
-        ? await tmdb.topRatedMovies(Number(page) || 1)
-        : await tmdb.topRatedTv(Number(page) || 1)
+        ? await tmdb.topRatedMovies(Number(page) || 1, getLang(request))
+        : await tmdb.topRatedTv(Number(page) || 1, getLang(request))
       return results
     } catch (err: any) {
       request.log.error(err)
@@ -87,8 +95,8 @@ export async function tmdbRoutes(app: FastifyInstance) {
 
     try {
       const results = mediaType === 'movie'
-        ? await tmdb.movieGenres()
-        : await tmdb.tvGenres()
+        ? await tmdb.movieGenres(getLang(request))
+        : await tmdb.tvGenres(getLang(request))
       return results
     } catch (err: any) {
       request.log.error(err)
@@ -104,8 +112,8 @@ export async function tmdbRoutes(app: FastifyInstance) {
 
     try {
       const results = mediaType === 'movie'
-        ? await tmdb.movieDetails(tmdbId)
-        : await tmdb.tvDetails(tmdbId)
+        ? await tmdb.movieDetails(tmdbId, getLang(request))
+        : await tmdb.tvDetails(tmdbId, getLang(request))
       return results
     } catch (err: any) {
       request.log.error(err)
@@ -123,7 +131,7 @@ export async function tmdbRoutes(app: FastifyInstance) {
     }
 
     try {
-      return await tmdb.seasonDetails(tmdbId, seasonNum)
+      return await tmdb.seasonDetails(tmdbId, seasonNum, getLang(request))
     } catch (err: any) {
       request.log.error(err)
       return reply.code(500).send({ error: 'TMDB season details failed' })
