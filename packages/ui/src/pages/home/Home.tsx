@@ -1,9 +1,11 @@
 import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { MediaRail } from '@/components/media/MediaRail'
 import { HeroCarousel } from '@/components/home/HeroCarousel'
 
 export default function Home() {
+  const { t } = useTranslation()
   const trendingMovies = useCallback(() => api.tmdb.trending('movie'), [])
   const trendingTv = useCallback(() => api.tmdb.trending('tv'), [])
   const popularMovies = useCallback(() => api.tmdb.popular('movie'), [])
@@ -15,11 +17,11 @@ export default function Home() {
       <HeroCarousel />
 
       <div className="-mt-16 relative z-10 px-0">
-        <MediaRail title="Trending Movies" fetcher={trendingMovies} />
-        <MediaRail title="Trending TV Shows" fetcher={trendingTv} />
-        <MediaRail title="Popular Movies" fetcher={popularMovies} />
-        <MediaRail title="Popular TV Shows" fetcher={popularTv} />
-        <MediaRail title="Top Rated" fetcher={topRatedMovies} />
+        <MediaRail title={t('home.trendingMovies')} fetcher={trendingMovies} />
+        <MediaRail title={t('home.trendingTv')} fetcher={trendingTv} />
+        <MediaRail title={t('home.popularMovies')} fetcher={popularMovies} />
+        <MediaRail title={t('home.popularTv')} fetcher={popularTv} />
+        <MediaRail title={t('home.topRated')} fetcher={topRatedMovies} />
       </div>
     </div>
   )

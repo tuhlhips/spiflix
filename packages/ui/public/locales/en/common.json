@@ -168,6 +168,20 @@
     "popularTv": "Popular TV Shows",
     "topRated": "Top Rated"
   },
+  "media": {
+    "trendingNow": "Trending Now",
+    "popular": "Popular",
+    "topRated": "Top Rated"
+  },
+  "drawer": {
+    "play": "Play",
+    "trailer": "Trailer",
+    "episodes": "Episodes",
+    "cast": "Cast",
+    "recommendations": "Recommendations",
+    "noImage": "No image",
+    "noOverview": "No overview available"
+  },
   "error": {
     "title": "Something went wrong",
     "reload": "Reload Page"
