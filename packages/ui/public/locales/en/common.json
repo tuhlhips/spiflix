@@ -1,0 +1,134 @@
+{
+  "app": {
+    "name": "Spiflix",
+    "tagline": "Stream movies and TV shows"
+  },
+  "nav": {
+    "home": "Home",
+    "movies": "Movies",
+    "shows": "TV Shows",
+    "discover": "Discover",
+    "settings": "Settings"
+  },
+  "home": {
+    "trendingMovies": "Trending Movies",
+    "trendingTv": "Trending TV Shows",
+    "popularMovies": "Popular Movies",
+    "popularTv": "Popular TV Shows",
+    "topRated": "Top Rated"
+  },
+  "search": {
+    "placeholder": "Search movies and TV shows...",
+    "noResults": "No results found",
+    "noResultsFilter": "No results match this filter",
+    "typeHint": "Type at least 2 characters to search",
+    "all": "All",
+    "movies": "Movies",
+    "tv": "TV",
+    "results": "results"
+  },
+  "player": {
+    "noSources": "No sources available",
+    "playbackError": "Playback error — try another source",
+    "goBack": "Go Back",
+    "episodes": "Episodes",
+    "nextEpisode": "Next episode starting soon...",
+    "playNext": "Play Next",
+    "cancel": "Cancel",
+    "settings": {
+      "source": "Source",
+      "quality": "Quality",
+      "speed": "Speed",
+      "subtitles": "Subtitles",
+      "audio": "Audio",
+      "off": "Off",
+      "auto": "Auto",
+      "noSubtitles": "No subtitles available",
+      "noAudio": "No audio tracks available",
+      "noSources": "No sources"
+    }
+  },
+  "drawer": {
+    "play": "Play",
+    "trailer": "Trailer",
+    "episodes": "Episodes",
+    "cast": "Cast",
+    "recommendations": "Recommendations",
+    "noImage": "No image",
+    "noOverview": "No overview"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "appearance": "Appearance",
+      "playback": "Playback",
+      "history": "History",
+      "backend": "Backend",
+      "tmdb": "TMDB"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System",
+      "accentColor": "Accent Color"
+    },
+    "playback": {
+      "autoplay": "Autoplay Next Episode",
+      "autoplayDesc": "Automatically play the next episode after a 5s countdown"
+    },
+    "history": {
+      "title": "Watch History",
+      "empty": "No watch history yet",
+      "clearAll": "Clear All",
+      "items": "items"
+    },
+    "backend": {
+      "url": "Backend URL",
+      "urlPlaceholder": "Leave empty for default",
+      "urlDesc": "Custom backend URL. Leave empty to use the default.",
+      "connectionStatus": "Connection Status",
+      "checking": "Checking...",
+      "connected": "Connected",
+      "disconnected": "Disconnected"
+    },
+    "tmdb": {
+      "apiKey": "TMDB API Key",
+      "configured": "Configured server-side",
+      "language": "Language",
+      "languageDesc": "UI language and TMDB content language",
+      "region": "Region",
+      "regionDesc": "Affects TMDB content availability"
+    }
+  },
+  "footer": {
+    "pages": "Pages",
+    "links": "Links",
+    "disclaimer": "Disclaimer",
+    "copyright": "This site does not host any copyrighted content."
+  },
+  "discover": {
+    "title": "Discover",
+    "surpriseMe": "Surprise Me",
+    "sortBy": "Sort by",
+    "yearFrom": "Year from",
+    "yearTo": "Year to",
+    "all": "All",
+    "noResults": "No results found",
+    "noResultsHint": "Try adjusting your filters",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page"
+  },
+  "media": {
+    "movie": "Movie",
+    "tv": "TV",
+    "watchNow": "Watch Now",
+    "noImage": "No Image"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "reload": "Reload Page"
+  }
+}

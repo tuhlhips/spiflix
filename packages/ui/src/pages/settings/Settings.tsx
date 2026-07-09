@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
+import { useHistory } from '@/app/providers/history-provider'
 import { api } from '@/lib/api'
 
 const themes = [
@@ -61,31 +62,12 @@ export default function Settings() {
   const [omssUrl, setOmssUrl] = usePersistentState('spiflix-omss-url', '')
   const [locale, setLocale] = usePersistentState('spiflix-locale', 'en')
   const [region, setRegion] = usePersistentState('spiflix-region', 'US')
+  const { items: watchHistory, clear: clearWatchHistory, remove: removeHistoryItem } = useHistory()
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null)
 
   useEffect(() => {
     api.health().then(() => setBackendOnline(true)).catch(() => setBackendOnline(false))
   }, [])
-
-  const watchHistory = typeof window !== 'undefined'
-    ? Object.keys(localStorage)
-        .filter(k => k.startsWith('playback_'))
-        .map(k => {
-          try {
-            const data = JSON.parse(localStorage.getItem(k) || '{}')
-            const [, type, id] = k.split('_')
-            return { key: k, type, id, title: data.title || id, progress: data.currentTime || 0, duration: data.duration || 0, updated: data.updated || 0 }
-          } catch { return null }
-        })
-        .filter(Boolean)
-        .sort((a: any, b: any) => (b.updated || 0) - (a.updated || 0))
-        .slice(0, 50)
-    : []
-
-  const clearWatchHistory = () => {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('playback_'))
-    keys.forEach(k => localStorage.removeItem(k))
-  }
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -203,11 +185,11 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground text-center py-8">No watch history yet</p>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {watchHistory.map((item: any) => {
-                const pct = item.duration > 0 ? Math.round((item.progress / item.duration) * 100) : 0
+              {watchHistory.map((item) => {
+                const pct = item.duration > 0 ? Math.round((item.currentTime / item.duration) * 100) : 0
                 return (
                   <div
-                    key={item.key}
+                    key={`${item.type}-${item.id}`}
                     onClick={() => {
                       const path = item.type === 'movie'
                         ? `/watch/movie/${item.id}`
@@ -217,7 +199,7 @@ export default function Settings() {
                     className="flex items-center justify-between rounded-lg border border-border p-3 cursor-pointer hover:bg-muted transition-colors"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-sm font-medium truncate">{item.title || `#${item.id}`}</p>
                       <p className="text-xs text-muted-foreground">{item.type === 'movie' ? 'Movie' : 'TV'}</p>
                     </div>
                     <div className="flex items-center gap-2">

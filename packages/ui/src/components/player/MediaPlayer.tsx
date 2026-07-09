@@ -4,6 +4,7 @@ import Hls from 'hls.js'
 import { api } from '@/lib/api'
 import { formatTime, cn } from '@/lib/utils'
 import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
+import { useHistory } from '@/app/providers/history-provider'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -47,6 +48,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const hlsRef = useRef<Hls | null>(null)
   const navigate = useNavigate()
   const { save: saveProgress, getResumeTime, clear: clearProgress } = usePlaybackProgress(type, tmdbId, season, episode)
+  const history = useHistory()
 
   const [playing, setPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -187,6 +189,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       setCurrentTime(video.currentTime)
       if (Math.floor(video.currentTime) % 10 === 0) {
         saveProgress(video.currentTime, video.duration)
+        history.add({ id: tmdbId, type, title: title || (type === 'tv' ? `S${season}E${episode}` : String(tmdbId)), currentTime: video.currentTime, duration: video.duration })
       }
     }
     const onDurationChange = () => setDuration(video.duration)
