@@ -278,7 +278,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         case ' ':
         case 'k':
           e.preventDefault()
-          video.paused ? video.play() : video.pause()
+          if (video.paused) video.play(); else video.pause()
           break
         case 'ArrowLeft':
           e.preventDefault()
@@ -319,13 +319,13 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     }, 3000)
   }, [playing])
 
-  const togglePlay = () => {
+  function togglePlay() {
     const video = videoRef.current
     if (!video) return
-    video.paused ? video.play() : video.pause()
+    if (video.paused) video.play(); else video.pause()
   }
 
-  const toggleFullscreen = async () => {
+  async function toggleFullscreen() {
     const container = containerRef.current
     if (!container) return
     if (document.fullscreenElement) {
@@ -337,7 +337,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     }
   }
 
-  const togglePiP = async () => {
+  async function togglePiP() {
     const video = videoRef.current
     if (!video) return
     try {
