@@ -84,6 +84,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
   // Fetch sources
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     setError(null)
     setShowAutoplay(false)
@@ -95,6 +96,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
     fetcher
       .then(data => {
+        if (cancelled) return
         setSources(data.sources || [])
         setSubtitles(data.subtitles || [])
         setAudioTracks(data.sources?.[0]?.audioTracks || [])
@@ -106,15 +108,19 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           setError('No sources available')
         }
       })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false))
+      .catch(err => { if (!cancelled) setError(err.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
   }, [tmdbId, type, season, episode])
 
   // Fetch title
   useEffect(() => {
+    let cancelled = false
     api.tmdb.details(type, tmdbId)
-      .then(data => setTitle(data.title || data.name || ''))
+      .then(data => { if (!cancelled) setTitle(data.title || data.name || '') })
       .catch(() => {})
+    return () => { cancelled = true }
   }, [tmdbId, type])
 
   // Attach HLS.js when source changes
