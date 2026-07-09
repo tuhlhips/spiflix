@@ -1,0 +1,17 @@
+{
+  "name": "spiflix-core",
+  "main": "dist/worker.js",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "build": {
+    "command": "cd ../.. && pnpm --filter @spiflix/shared build && cd packages/core && npx wrangler deploy --dry-run --outdir=dist"
+  },
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "CACHE_TYPE": "memory"
+  }
+}

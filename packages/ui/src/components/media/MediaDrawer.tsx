@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, Play, Star, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Play, Star, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { TrailerDialog } from './TrailerDialog'
 import { api } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'

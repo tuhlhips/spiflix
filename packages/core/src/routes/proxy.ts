@@ -15,6 +15,9 @@ export async function proxyRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Missing data parameter' })
     }
 
-    await proxyRequest(data, reply)
+    const resp = await proxyRequest(data)
+    reply.code(resp.status)
+    resp.headers.forEach((v, k) => reply.header(k, v))
+    return resp.body ? reply.send(resp.body) : reply.send()
   })
 }

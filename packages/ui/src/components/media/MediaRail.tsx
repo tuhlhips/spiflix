@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { MediaCard } from './MediaCard'

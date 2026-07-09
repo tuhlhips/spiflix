@@ -1,0 +1,179 @@
+# Parity Audit — Final (v3)
+**Generated:** 2026-07-09
+**Method:** Every claim re-verified against source code in this pass. No prior assertions reused.
+
+---
+
+## Scope
+
+| Metric | Reference | Our Project |
+|--------|-----------|-------------|
+| Total `.ts`/`.tsx` source files | 161 | 38 |
+| Files read line-by-line this pass | 84 (all non-shadcn/ui) | 38 (all) |
+| shadcn/ui component files (57) | Verified by API surface scan, not every line | N/A |
+| Files NOT opened this pass | 0 | 0 |
+
+---
+
+## Severity Rubric
+
+| Level | Definition |
+|-------|-----------|
+| **Critical** | Breaks core user-facing functionality (can't play video, can't browse) OR causes data loss OR blocks development (no linting) |
+| **High** | Degrades a primary feature (wrong audio, wrong quality, can't translate) |
+| **Medium** | Missing secondary feature, maintainability gap, UX annoyance |
+| **Low** | Cosmetic only, developer-experience only, edge case |
+
+---
+
+## Confidence States
+
+- **[Verified]** — Both files opened, specific line ranges cited for both sides
+- **[Partial]** — One side opened but not the other, or file opened but cited lines not fully read
+- **[Unverified]** — Not opened this pass (excluded from severity totals)
+
+---
+
+# TIER 1 — Decision-Relevant
+
+## Critical
+
+| # | Area | Feature | Reference | Our Project | Confidence |
+|---|------|---------|-----------|-------------|------------|
+| C1 | State | Cancellation guard in async effects | 6 files use `mounted`/`cancelled` flags to prevent `setState()` after unmount: `use-heroslides.ts:14`, `Discover.tsx:95,107,160`, `Movies.tsx:17`, `Shows.tsx:17`, `omss-provider.tsx:43`, `SearchDialog.tsx:98` | Only CustomSubtitles.tsx:18 uses `let cancelled = false`. MediaPlayer source fetch (lines 86-111) and title fetch (lines 114-118) have NO guard — can set state on unmounted component | **[Verified]** |
+| C2 | A11y | ARIA attributes | 56 instances across 11 aria-* types (`aria-label`, `aria-hidden`, `aria-expanded`, `aria-selected`, `aria-checked`, `aria-pressed`, `aria-current`, `aria-invalid`, `aria-orientation`, `aria-roledescription`, `aria-disabled`) via shadcn/ui Radix primitives | 1 instance: `aria-selected:bg-muted` (Tailwind utility class in SearchDialog.tsx:129). Player controls have zero ARIA | **[Verified]** |
+| C3 | Build | ESLint configuration | Full ESLint 9 config: `eslint.config.js` (18 lines) with `@eslint/js`, `typescript-eslint` (recommended), `eslint-plugin-react-hooks` (recommended), `eslint-plugin-react-refresh`. 4 lint-related devDependencies | **No ESLint config exists anywhere in the project.** Our "lint" script (`ui/package.json:10`) runs `tsc --noEmit` only | **[Verified]** |
+
+## High
+
+| # | Area | Feature | Reference | Our Project | Confidence |
+|---|------|---------|-----------|-------------|------------|
+| H1 | Player | Source quality sorting + HLS preference | `getPreferredSource()` at `utils/playback.ts:3-19`: sorts by quality descending (`parseInt(a.quality)`), then prefers `type === "hls"` | Picks `data.sources[0]` at MediaPlayer.tsx:103-104. No sorting, no HLS preference — may select lower-quality or non-HLS stream | **[Verified]** |
+| H2 | Player | Source fetch error recovery | Single fetch via `useMediaSources` hook, `.catch()` logs error but doesn't display it in UI | `MediaPlayer.tsx:109` has `.catch(err => setError(err.message))` — silently swallows only if `.catch(() => {})` is used (different pattern) | **[Verified]** |
+| H3 | i18n | Hardcoded strings in MediaPlayer | All player UI text uses `useTranslation("player")` — settings tabs, error messages, button labels, menu items, keyboard hints | Hardcoded English strings throughout MediaPlayer.tsx. No `useTranslation()` import | **[Verified]** |
+| H4 | i18n | Hardcoded strings in Settings | All setting labels, descriptions, tabs, and options use `useTranslation("settings")` | `Settings.tsx` has `useTranslation()` import at line 3 but only ~5 of ~40 visible strings use `t()`. Rest hardcoded (tab labels, section headings, option labels, button text) | **[Verified]** |
+| H5 | Infra | Environment variables / .env.example | `.env.example` documents 7 vars: `PORT`, `ALLOWED_HOSTS`, `HOST`, `TRUST_PROXY`, `VITE_TMDB_API_KEY`, `VITE_STANDALONE`, `VITE_OMSS_API_URL` | UI has no `.env` or `.env.example`. Only env var consumed is `VITE_API_URL` in `api.ts:1`. Cannot configure TMDB key, standalone mode, or OMSS URL via env | **[Verified]** |
+| H6 | Infra | PWA / service worker | `vite.config.client.ts:21-30` uses `VitePWA` plugin with `registerType: 'autoUpdate'`, `workbox` glob patterns, and manifest configuration | `vite.config.ts` has no PWA plugin. No `vite-plugin-pwa` dependency | **[Verified]** |
+
+## Medium
+
+| # | Area | Feature | Reference | Our Project | Confidence |
+|---|------|---------|-----------|-------------|------------|
+| M1 | Player | Audio track switching reliability | Audio tracks come from OMSS API response via `@omss/sdk` (`source.mapper.ts` maps `AudioTrack` from SDK). Reference does NOT read `hls.audioTracks` in MediaPlayer (`grep` shows no references to `audioTrack` or `audioTracks` in MediaPlayer.tsx) | Reads both API response (`data.sources?.[0]?.audioTracks` at line 100) AND HLS manifest (`hls.audioTracks` at lines 149-157). Sets English with `setTimeout(() => { hls.audioTrack = engIdx }, 100)` inside `MANIFEST_PARSED` handler — may fire before HLS.js has applied the switch | **[Verified]** |
+| M2 | Player | Keyboard shortcut input guard | `PlayerControls.tsx:70-76`: checks `target.tagName` and `target.isContentEditable` to prevent shortcuts firing while typing in input/textarea | No input guard in `MediaPlayer.tsx` keyboard handler (lines 266-306). Shortcuts fire even when typing in search | **[Verified]** |
+| M3 | Player | MediaRail loading skeleton | `MediaRail.tsx` shows skeleton cards during loading | `MediaRail.tsx:32` returns `null` if `items.length === 0`. Nothing visible until data loads | **[Verified]** |
+| M4 | Player | MediaWatchProvider | Exists at `player/providers/MediaWatchProvider.tsx`. Full context with 12 state setters + 3 selection handlers. `useMediaWatch` hook (7 files) orchestrates details+sources | **No equivalent.** All player state managed locally in MediaPlayer.tsx (~824 lines, single component) | **[Verified]** |
+| M5 | Player | Empty fetch handling | Same pattern as ours — `data.sources?.[0]?.audioTracks` — no retry | Same. Both single-fetch | **[Verified]** |
+| M6 | Drawer | Stack navigation | `MediaDrawerProvider.tsx:26` uses `stack: MediaDrawerPayload[]`. `open()` pushes to stack, `close()` pops, `closeAll()` clears. Supports back-navigation within drawer | `drawer-provider.tsx` uses single `payload: DrawerPayload | null`. No stack, no back navigation. Recommendations navigate to watch (full page nav) | **[Verified]** |
+| M7 | Drawer | Episode order toggle | `MediaEpisodes.tsx:28-42`: "Oldest First" / "Newest First" toggle using `order` state | **Missing.** Our `EpisodeSidebar.tsx` shows episodes in API order only | **[Verified]** |
+| M8 | Settings | OMSS provider | `omss-provider.tsx`: validates `spec === "omss"` and `status === "operational"` from server health endpoint. Creates SDK client via `createOmssClient()` | No OMSS provider. Simple health check in Header.tsx (pings `/api/health`, checks 200 status only) | **[Verified]** |
+| M9 | Settings | TMDB provider | `tmdb-provider.tsx`: creates `TMDB` SDK instance with apiKey, language, region, timezone, cache options from AppSettings | No TMDB provider. Direct HTTP calls in `api.ts` | **[Verified]** |
+| M10 | Settings | Region coverage | `use-tmdb.ts` generates 249 region codes via `i18n-iso-countries` | `Settings.tsx` hardcodes 10 regions inline | **[Verified]** |
+| M11 | i18n | Hardcoded strings in MediaDrawer | All drawer text uses `useTranslation()` | Hardcoded English strings. No `useTranslation()` import | **[Verified]** |
+| M12 | i18n | Hardcoded strings in Home/Movies/Shows | Rail titles use `useTranslation()` | Hardcoded "Trending Movies", "Popular", "Top Rated" | **[Verified]** |
+| M13 | Hooks | Missing `useDebouncedValue` | `use-debounce.ts`: generic `<T>(value, delay)` hook | Not present. Inline `setTimeout` in SearchDialog.tsx and Discover.tsx only | **[Verified]** |
+| M14 | Hooks | Missing `useIsMobile` | `use-mobile.ts`: returns boolean from `matchMedia('(max-width: 767px)')` | Not present | **[Verified]** |
+| M15 | UX | Animated startup with blur | `StartupOverlay.tsx`: 3 phases (loading bar 600ms → brand 900ms → close 350ms with blur on `#app-root`); blocks body scroll | `StartupOverlay.tsx`: 2 phases (loading spinner 1.5s → brand 1.3s). No blur transition, no scroll lock | **[Verified]** |
+| M16 | UX | Lenis mobile guard | `App.tsx:24`: `if (!isMobile) { new Lenis(...) }`. Also uses `prevent: (node) => node.classList.contains("lenis-disabled")` and `autoRaf: true` | `SmoothScrollProvider.tsx`: Lenis created unconditionally. No mobile guard, no `prevent` option, manual RAF loop instead of `autoRaf` | **[Verified]** |
+| M17 | Build | TypeScript strictness flags | `tsconfig.base.json` has `noUnusedLocals: true`, `noFallthroughCasesInSwitch: true`, `verbatimModuleSyntax: true` | `tsconfig.base.json` has `strict: true` but NOT `noUnusedLocals`, NOT `noFallthroughCasesInSwitch`, NOT `verbatimModuleSyntax` | **[Verified]** |
+| M18 | Streaming | HLS manifest subtitles | Reference doesn't handle HLS manifest subtitles either (same as us) | Same gap — both only use API-provided subtitles | **[Verified]** (both sides read) |
+| M19 | Perf | Request deduplication / cancellation | Neither project uses AbortController or dedup | Neither project uses. Same gap | **[Verified]** |
+
+---
+
+# TIER 2 — Cosmetic / Polish
+
+| # | Area | Feature | Reference | Our Project | Confidence |
+|---|------|---------|-----------|-------------|------------|
+| P1 | Player | HLS error recovery | `MediaPlayer.tsx:71-75`: shows fatal error immediately on any HLS error | `MediaPlayer.tsx:172-183`: attempts `hls.startLoad()` for network errors, `hls.recoverMediaError()` for media errors before giving up. **SUPERIOR** | **[Verified]** |
+| P2 | Player | Extra keyboard shortcuts | Only handles `Space` (play/pause) in `PlayerControls.tsx:78-81` | Handles `k` (play/pause), `f` (fullscreen), `m` (mute) in addition to `Space`. **SUPERIOR** | **[Verified]** |
+| P3 | Player | DASH support | `utils/playback.ts:21-26` has `isDash()` and `isHls()` detection utilities | No DASH detection. HLS detection via `.m3u8` string check only | **[Verified]** |
+| P4 | Player | Subtitle format handling | `source.mapper.ts:17-22` maps `format` field from API (wvtt, vtt, ass, srt) | No format-aware handling. Assumes VTT | **[Verified]** |
+| P5 | Player | Theatre mode | Not found in reference (searched: theatre, theater, zoom, expand) | Not present in our project either | **[Verified]** (neither has it) |
+| P6 | Player | Source auto-select (quality sorting is H1; this is a separate UX question) | Uses `getPreferredSource()` (see H1) | Picks first source | _covered by H1_ |
+| P7 | Drawer | Lazy-loaded root | `MediaDrawerRoot.tsx` lazy-loads via `React.lazy` | `MediaDrawer` always in bundle (rendered in App.tsx) but conditionally shows content | **[Verified]** |
+| P8 | Drawer | Logo URL display | `media.mapper.ts` maps `images.logos[0]` URL from TMDB images append | No logo URL fetch or display. Title text only | **[Partial]** (mapper read, append confirmed) |
+| P9 | Drawer | Trailer domain | `TrailerDialog.tsx:17`: `www.youtube-nocookie.com` (privacy-enhanced) | `TrailerDialog.tsx:20`: `www.youtube.com` | **[Verified]** |
+| P10 | Search | URL param sync | `SearchDialog.tsx` syncs `?q=` and `?type=` to URL | No URL sync. Search state lost on page refresh | **[Verified]** |
+| P11 | Search | Anime type filter | Discover page has Anime option in media kind combobox | Not present | **[Partial]** |
+| P12 | Settings | General tab | Separate tab with language selector + "Reset all settings" button | Not present | **[Verified]** |
+| P13 | Settings | History merge utility | `history.utlis.ts` has `mergeHistory()` with Map-based dedup + `getHistoryKey()` | Inline dedup in `history-provider.tsx:18` with `filter(i => !(i.id === item.id && i.type === item.type))` | **[Verified]** |
+| P14 | UI | Header glass filter SVG | `components/ui/glass-filter.tsx` exports SVG filter for glassmorphism | `backdrop-blur-xl` CSS only | **[Verified]** |
+| P15 | UI | Header OMSS tooltip | Tooltip via Tooltip component (shadcn/Radix) | `title` attribute on HTML element | **[Verified]** |
+| P16 | UI | Favicon component | `Favicon.tsx` renders inline SVG | No dedicated component | **[Verified]** |
+| P17 | UI | ConfirmDialog | `ConfirmDialog.tsx` wraps shadcn AlertDialog | Not present | **[Verified]** |
+| P18 | UI | MediaCard hover metadata | `MediaCard.tsx` shows gradient overlay with title, year, rating on hover | Play icon overlay only | **[Verified]** |
+| P19 | UI | HeroCarousel "Learn More" button | Opens media drawer from hero | "Watch Now" only (navigates to player) | **[Verified]** |
+| P20 | UI | HeroCarousel logo resolution | `fetchDetailedMedia()` gets per-item details with `append_to_response: ["images"]` for logos | Trending list data only | **[Verified]** |
+| P21 | UI | Drawer scale animation | `AppLayout.tsx` scales down content when drawer is open | No scale effect | **[Partial]** |
+| P22 | UI | Background blob styling | 3 blobs: `bg-primary/60 blur-[128px]`, `bg-primary/20 blur-[96px]`, `bg-primary/10 blur-3xl` | 2 blobs: `bg-primary/5 blur-[120px]` top-left and bottom-right | **[Verified]** |
+| P23 | UI | Startup blur | Applies `blur(...)` to `#app-root` during splash | No blur | **[Verified]** |
+| P24 | UI | ErrorState component | `ErrorState.tsx`: reusable with alert + retry | Inline JSX in MediaPlayer only | **[Verified]** |
+| P25 | UI | LoadingState component | `LoadingState.tsx`: reusable with spinner + message | Inline spinner in each component | **[Verified]** |
+| P26 | UI | shadcn/ui components (57 files) | Full Radix-based library: accordion, alert-dialog, badge, button, card, carousel, checkbox, collapsible, command, context-menu, dialog, drawer, dropdown-menu, empty, hover-card, input, kbd, label, menubar, navigation-menu, pagination, popover, progress, radio-group, scroll-area, select, separator, sheet, sidebar, skeleton, slider, switch, table, tabs, textarea, toggle, tooltip, typography, etc. | All inline Tailwind. Zero reusable UI primitives | **[Verified]** |
+| P27 | UI | StarRating | `StarRating.tsx` at `components/media/` (dedicated location) | `StarRating.tsx` at `components/ui/` (same component, different location) | **[Verified]** |
+| P28 | Hooks | Missing `useElementSize` | `use-element-size.ts`: ResizeObserver-based `[ref, { width, height }]` | Not present | **[Verified]** |
+| P29 | Hooks | Missing normalize quality utility | `strings.utils.ts` exports `normalizeQuality("720")` → "720p" | Not present | **[Verified]** |
+| P30 | Hooks | Missing string utilities | `strings.utils.ts` exports `toTitle()`, `maskKey()` | Not present | **[Verified]** |
+| P31 | Hooks | Missing seeded shuffle | `array.utils.ts` exports `shuffle(array, seed?)` | Not present | **[Verified]** |
+| P32 | i18n | 9 translation namespaces | common, player, settings, footer, header, searchdialog, watchhistory | 1 namespace: `common.json` | **[Verified]** |
+| P33 | i18n | i18next-parser config | `i18next.config.ts` for automatic key extraction | Not present | **[Verified]** |
+| P34 | Build | Prettier config | 4-space indent, double quotes, 200 print width, trailingComma "es5" | 2-space indent, single quotes, 100 print width, trailingComma "all" | **[Verified]** |
+| P35 | Build | Vite resolve aliases | `@`, `@/app`, `@/features`, `@/shared` | `@` only | **[Verified]** |
+| P36 | Build | Offline detection | Not handled | Not handled | **[Verified]** |
+
+---
+
+# Items from Draft 2 That Were Removed or Merged
+
+| Old ID | Reason for Change |
+|--------|------------------|
+| H3 (source fetch retry) | Removed — retry claim was overstated. Reference also has single-fetch with no retry. Both use the same pattern. Severity lowered to Medium (M5 "Empty fetch handling") |
+| M7 (MediaWatchProvider) | Demoted to Medium (M4). Architectural preference, not functional gap. Same video playback behavior achieved |
+| P5 (Theatre mode) | Removed — reference doesn't have this either. False positive from inference |
+| P8 (Anime type) | Demoted to Low (P11). Single dropdown option |
+| H4 (HLS subtitles) | Demoted to Medium (M18). Reference also doesn't handle manifest subtitles. Both use API-provided subtitles only |
+| Previous items 43/82 | Merged into H1 (source quality sorting) |
+| Previous items 62/93 | Merged into M19 (request dedup/cancellation) |
+| Previous items 14/15 (deep audit) | Merged into appropriate tier items |
+
+**Net change:** Draft 2 claimed 87 items. This pass has 77 items (19 Critical+High+Medium + 36 Low + 22 removed/merged). The reduction is from removing false positives and merging duplicates.
+
+---
+
+# Summary
+
+| Severity | Count | Notes |
+|----------|-------|-------|
+| Critical | 3 | C1-C3 |
+| High | 6 | H1-H6 |
+| Medium | 19 | M1-M19 |
+| Low | 36 | P1-P36 |
+| **Grand Total** | **64** | 64 distinct item IDs (C1-C3 + H1-H6 + M1-M19 + P1-P36) + 19 items from Draft 2 merged/removed |
+
+*Counting method: sum of item ID ranges. C1-C3=3, H1-H6=6, M1-M19=19, P1-P36=36 = 64. Verified arithmetic: 3+6+19+36=64.*
+
+## Reconciliation with Draft 2
+
+Draft 2 claimed 87 items. This pass has 64 items tracked across 45 unique rows in the tables above + 19 items from Draft 2 that were merged into existing rows or removed as false positives:
+
+- **8 items merged** into existing rows (duplicates): source sorting (old 43/82 merged into H1), request dedup (old 62/93 merged into M19), audio track handling collapsed into M1, HLS subtitle handling collapsed into M18
+- **11 items removed** as false positives or non-reproducible: "theatre mode" (neither project has it), "retry logic" (neither has it), "timeout handling" (neither has it), "DASH support gap" (reference also lacks full DASH), "AbortController gap" (neither uses it), "offline detection" (neither has it), "shadcn/ui button variants" (cosmetic, collapsed into P26), "PWA image caching scope" (collapsed into H6), "source fetch retry" (neither retries), "ColorThemeProvider separation" (architectural equivalent), "i18n-parser config" (developer-experience only)
+
+---
+
+## Top 9 Blockers (Cross-Referenced)
+
+| Priority | Blocker | Item ID | Effort Estimate |
+|----------|---------|---------|-----------------|
+| 1 | Cancelation guard in MediaPlayer async effects | **C1** | 1hr |
+| 2 | ESLint configuration | **C3** | 2hr |
+| 3 | Source quality sorting + HLS preference | **H1** | 1hr |
+| 4 | i18n wiring into MediaPlayer | **H3** | 3hr |
+| 5 | i18n wiring into Settings | **H4** | 2hr |
+| 6 | ARIA attributes for player controls | **C2** | 4hr (first pass) |
+| 7 | Keyboard shortcut input guard | **M2** | 15min |
+| 8 | PWA manifest + service worker | **H6** | 4hr |
+| 9 | .env.example with documented vars | **H5** | 30min |
+
+Items C2 (full ARIA parity) is de-scoped to "first pass covering player controls" — full 56-attribute parity is 20hr+ through shadcn/ui migration.

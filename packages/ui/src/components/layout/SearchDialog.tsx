@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Film, Tv, Loader2 } from 'lucide-react'
-import { CommandDialog, CommandRoot, CommandInput, CommandList, CommandEmpty, CommandItem, CommandLoading } from 'cmdk'
+import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandItem } from 'cmdk'
 import { api } from '@/lib/api'
 import { getImageUrl, cn } from '@/lib/utils'
 import { useDrawer } from '@/app/providers/drawer-provider'

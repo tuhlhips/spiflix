@@ -1,0 +1,48 @@
+{
+  "title": "Settings",
+  "tabs": {
+    "appearance": "Appearance",
+    "playback": "Playback",
+    "history": "History",
+    "backend": "Backend",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "accent_color": "Accent Color"
+  },
+  "playback": {
+    "autoplay": "Autoplay Next Episode",
+    "autoplay_desc": "Automatically play the next episode after a 5s countdown"
+  },
+  "history": {
+    "title": "Watch History",
+    "empty": "No watch history yet",
+    "clear_all": "Clear All",
+    "items": "items",
+    "movie": "Movie",
+    "tv": "TV"
+  },
+  "backend": {
+    "title": "Backend",
+    "url": "Backend URL",
+    "url_placeholder": "Leave empty for default",
+    "url_desc": "Custom backend URL. Leave empty to use the default.",
+    "connection_status": "Connection Status",
+    "checking": "Checking...",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "TMDB API Key",
+    "configured": "Configured server-side",
+    "language": "Language",
+    "language_desc": "UI language and TMDB content language",
+    "region": "Region",
+    "region_desc": "Affects TMDB content availability"
+  }
+}

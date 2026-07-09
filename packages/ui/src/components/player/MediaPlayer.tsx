@@ -7,11 +7,11 @@ import { formatTime, cn } from '@/lib/utils'
 import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import { useHistory } from '@/app/providers/history-provider'
 import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
-import { getPreferredSource, isHls, isDash } from '@/utils/playback'
+import { getPreferredSource, isHls } from '@/utils/playback'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
-  PictureInPicture, PictureInPicture2, ChevronDown, Subtitles,
+  PictureInPicture, PictureInPicture2, Subtitles,
   HardDrive, Captions, Gauge, Clapperboard, Check,
 } from 'lucide-react'
 import { CustomSubtitles } from './CustomSubtitles'
@@ -270,6 +270,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return
+
       const video = videoRef.current
       if (!video) return
 

@@ -3,7 +3,7 @@ import { useTheme } from '@/app/providers/theme-provider'
 import { usePersistentState } from '@/hooks/useLocalStorage'
 import {
   Monitor, Moon, Sun, Palette, Play, Trash2, ExternalLink,
-  History, ChevronLeft, Server, Globe, Check, X,
+  History, ChevronLeft, Server, Globe, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
@@ -62,7 +62,7 @@ export default function Settings() {
   const [omssUrl, setOmssUrl] = usePersistentState('spiflix-omss-url', '')
   const [locale, setLocale] = usePersistentState('spiflix-locale', 'en')
   const [region, setRegion] = usePersistentState('spiflix-region', 'US')
-  const { items: watchHistory, clear: clearWatchHistory, remove: removeHistoryItem } = useHistory()
+  const { items: watchHistory, clear: clearWatchHistory } = useHistory()
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null)
 
   useEffect(() => {

@@ -1,26 +1,18 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import Lenis from 'lenis'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export function SmoothScrollProvider({ children }: { children: ReactNode }) {
-  const lenisRef = useRef<Lenis | null>(null)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
+    if (isMobile) return
     const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      wheelMultiplier: 1,
-      touchMultiplier: 1.5,
+      autoRaf: true,
+      prevent: (node) => node.classList.contains('lenis-disabled'),
     })
-    lenisRef.current = lenis
-
-    function raf(time: number) {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
-    }
-    requestAnimationFrame(raf)
-
     return () => lenis.destroy()
-  }, [])
+  }, [isMobile])
 
   return <>{children}</>
 }

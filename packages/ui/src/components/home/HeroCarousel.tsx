@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Info, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Play, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
 
