@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { formatTime, cn } from '@/lib/utils'
 import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import { useHistory } from '@/app/providers/history-provider'
+import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -38,7 +39,7 @@ interface AudioTrack {
   label: string
 }
 
-type SettingsTab = 'source' | 'quality' | 'speed' | 'subtitles' | 'audio'
+type SettingsTab = 'source' | 'quality' | 'speed' | 'subtitles' | 'audio' | 'captions'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -76,6 +77,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [selectedSubtitle, setSelectedSubtitle] = useState<Subtitle | null>(null)
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<AudioTrack | null>(null)
+  const [subSettings, setSubSettings] = useSubtitleSettings()
 
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -141,6 +143,20 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           if (hls.levels.length > 0) {
             setQualities(hls.levels.map((l, i) => ({ index: i, height: l.height, label: `${l.height}p` })))
           }
+
+          // Read audio tracks from HLS manifest
+          if (hls.audioTracks.length > 0) {
+            const tracks = hls.audioTracks.map(t => ({ language: t.lang || '', label: t.name || t.lang || `Track ${t.id}` }))
+            setAudioTracks(tracks)
+
+            // Default to English if available (defer to ensure HLS.js processes the switch)
+            const engIdx = hls.audioTracks.findIndex(t => t.lang?.startsWith('en'))
+            if (engIdx >= 0) {
+              setSelectedAudioTrack(tracks[engIdx])
+              setTimeout(() => { hls.audioTrack = engIdx }, 100)
+            }
+          }
+
           const resume = getResumeTime()
           if (resume && video.duration > 0) {
             video.currentTime = resume
@@ -342,6 +358,19 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     setCurrentQuality(level)
   }
 
+  // Switch audio track when selected
+  useEffect(() => {
+    const hls = hlsRef.current
+    if (!hls || !selectedAudioTrack || hls.audioTracks.length === 0) return
+    // HLS.js audioTracks use `name` (EXT-X-MEDIA NAME) and `lang` (LANGUAGE)
+    const idx = hls.audioTracks.findIndex(t =>
+      t.name === selectedAudioTrack.label || t.lang === selectedAudioTrack.language
+    )
+    if (idx >= 0 && idx !== hls.audioTrack) {
+      hls.audioTrack = idx
+    }
+  }, [selectedAudioTrack])
+
   return (
     <div
       ref={containerRef}
@@ -522,148 +551,243 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                     <Settings className="h-5 w-5" />
                   </button>
                   {showSettings && (
-                    <div className="absolute bottom-full right-0 mb-2 w-64 rounded-lg bg-background border border-border p-2 shadow-xl">
+                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-background/95 backdrop-blur-xl border border-border shadow-xl max-h-[70vh] flex flex-col">
                       {/* Tabs */}
-                      <div className="flex gap-1 mb-2 border-b border-border pb-2">
-                        {(['source', 'quality', 'speed', 'subtitles', 'audio'] as SettingsTab[]).map(tab => (
+                      <div className="flex flex-wrap gap-0.5 p-2 border-b border-border">
+                        {(['source', 'quality', 'speed', 'subtitles', 'audio', 'captions'] as SettingsTab[]).map(tab => (
                           <button
                             key={tab}
                             onClick={() => setSettingsTab(tab)}
                             className={cn(
-                              'flex-1 rounded-md px-2 py-1 text-xs font-medium capitalize transition-colors',
-                              settingsTab === tab ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+                              'rounded-md px-2 py-1 text-[10px] font-medium capitalize transition-colors',
+                              settingsTab === tab ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
                             )}
                           >
-                            {tab}
+                            {tab === 'captions' ? 'Style' : tab}
                           </button>
                         ))}
                       </div>
 
-                      {/* Source list */}
-                      {settingsTab === 'source' && (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {sources.length === 0 ? (
-                            <p className="text-xs text-muted-foreground px-2 py-1">No sources</p>
-                          ) : (
-                            sources.map((s, i) => (
-                              <button
-                                key={i}
-                                onClick={() => { setSelectedSource(s); setShowSettings(false) }}
-                                className={cn(
-                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                  selectedSource === s ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                )}
-                              >
-                                {s.provider.name} — {s.quality}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {/* Quality list */}
-                      {settingsTab === 'quality' && (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {qualities.length === 0 ? (
-                            <p className="text-xs text-muted-foreground px-2 py-1">Auto (HLS)</p>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleQualityChange(-1)}
-                                className={cn(
-                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                  currentQuality === -1 ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                )}
-                              >
-                                Auto
-                              </button>
-                              {qualities.map(q => (
-                                <button
-                                  key={q.index}
-                                  onClick={() => handleQualityChange(q.index)}
-                                  className={cn(
-                                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                    currentQuality === q.index ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                  )}
-                                >
-                                  {q.label}
-                                </button>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Audio tracks list */}
-                      {settingsTab === 'audio' && (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {audioTracks.length === 0 ? (
-                            <p className="text-xs text-muted-foreground px-2 py-1">No audio tracks available</p>
-                          ) : (
-                            audioTracks.map((track, i) => (
-                              <button
-                                key={i}
-                                onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
-                                className={cn(
-                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                  selectedAudioTrack === track ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                )}
-                              >
-                                {track.label || track.language}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {/* Subtitles list */}
-                      {settingsTab === 'subtitles' && (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          <button
-                            onClick={() => setSelectedSubtitle(null)}
-                            className={cn(
-                              'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                              !selectedSubtitle ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                      {/* Content */}
+                      <div className="flex-1 overflow-y-auto p-2 min-h-0">
+                        {/* Source list */}
+                        {settingsTab === 'source' && (
+                          <div className="space-y-1">
+                            {sources.length === 0 ? (
+                              <p className="text-xs text-muted-foreground px-2 py-1">No sources</p>
+                            ) : (
+                              (() => {
+                                const grouped = sources.reduce<Record<string, typeof sources>>((acc, s) => {
+                                  const provider = s.provider.name
+                                  if (!acc[provider]) acc[provider] = []
+                                  acc[provider].push(s)
+                                  return acc
+                                }, {})
+                                return Object.entries(grouped).map(([provider, providerSources]) => (
+                                  <div key={provider} className="mb-3 last:mb-0">
+                                    <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{provider}</div>
+                                    <div className="mt-1 space-y-0.5">
+                                      {providerSources.map((s, i) => (
+                                        <button
+                                          key={`${s.provider.id}-${i}`}
+                                          onClick={() => { setSelectedSource(s); setShowSettings(false) }}
+                                          className={cn(
+                                            'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                            selectedSource === s ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                          )}
+                                        >
+                                          <span className="font-medium">Source {i + 1}</span>
+                                          <span className="ml-1.5 text-xs text-muted-foreground">{s.quality}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                              })()
                             )}
-                          >
-                            Off
-                          </button>
-                          {subtitles.length === 0 ? (
-                            <p className="text-xs text-muted-foreground px-2 py-1">No subtitles available</p>
-                          ) : (
-                            subtitles.map((sub, i) => (
-                              <button
-                                key={i}
-                                onClick={() => { setSelectedSubtitle(sub); setShowSettings(false) }}
-                                className={cn(
-                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                  selectedSubtitle === sub ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
-                                )}
-                              >
-                                {sub.label}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        )}
 
-                      {/* Speed list */}
-                      {settingsTab === 'speed' && (
-                        <div className="space-y-1">
-                          {PLAYBACK_RATES.map(rate => (
+                        {/* Quality list */}
+                        {settingsTab === 'quality' && (
+                          <div className="space-y-1">
                             <button
-                              key={rate}
-                              onClick={() => { setPlaybackRate(rate); setShowSettings(false) }}
+                              onClick={() => handleQualityChange(-1)}
                               className={cn(
                                 'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                                playbackRate === rate ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                currentQuality === -1 ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
                               )}
                             >
-                              {rate}x
+                              Auto
                             </button>
-                          ))}
-                        </div>
-                      )}
+                            {qualities.map(q => (
+                              <button
+                                key={q.index}
+                                onClick={() => handleQualityChange(q.index)}
+                                className={cn(
+                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                  currentQuality === q.index ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                )}
+                              >
+                                {q.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Audio tracks list */}
+                        {settingsTab === 'audio' && (
+                          <div className="space-y-1">
+                            {audioTracks.length === 0 ? (
+                              <p className="text-xs text-muted-foreground px-2 py-1">No audio tracks available</p>
+                            ) : (
+                              audioTracks.map((track, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
+                                  className={cn(
+                                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                    selectedAudioTrack === track ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                  )}
+                                >
+                                  {track.label || track.language}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+
+                        {/* Subtitles list */}
+                        {settingsTab === 'subtitles' && (
+                          <div className="space-y-1">
+                            <button
+                              onClick={() => setSelectedSubtitle(null)}
+                              className={cn(
+                                'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                !selectedSubtitle ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                              )}
+                            >
+                              Off
+                            </button>
+                            {subtitles.length === 0 ? (
+                              <p className="text-xs text-muted-foreground px-2 py-1">No subtitles available</p>
+                            ) : (
+                              subtitles.map((sub, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => { setSelectedSubtitle(sub); setShowSettings(false) }}
+                                  className={cn(
+                                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                    selectedSubtitle === sub ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                  )}
+                                >
+                                  {sub.label}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+
+                        {/* Speed list */}
+                        {settingsTab === 'speed' && (
+                          <div className="space-y-1">
+                            {PLAYBACK_RATES.map(rate => (
+                              <button
+                                key={rate}
+                                onClick={() => { setPlaybackRate(rate); setShowSettings(false) }}
+                                className={cn(
+                                  'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                                  playbackRate === rate ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+                                )}
+                              >
+                                {rate}x
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Captions style (subtitle customization) */}
+                        {settingsTab === 'captions' && (
+                          <div className="space-y-4">
+                            {/* Font size */}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-2">Font Size</p>
+                              <div className="flex gap-1">
+                                {FONT_SIZES.map(f => (
+                                  <button
+                                    key={f.value}
+                                    onClick={() => setSubSettings({ ...subSettings, fontSize: f.value })}
+                                    className={cn(
+                                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                                      subSettings.fontSize === f.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                                    )}
+                                  >
+                                    {f.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Color */}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-2">Color</p>
+                              <div className="flex gap-2">
+                                {COLORS.map(c => (
+                                  <button
+                                    key={c.value}
+                                    onClick={() => setSubSettings({ ...subSettings, color: c.value })}
+                                    className={cn(
+                                      'h-7 w-7 rounded-full ring-offset-2 ring-offset-background transition-all',
+                                      subSettings.color === c.value ? 'ring-2 ring-primary scale-110' : '',
+                                    )}
+                                    title={c.label}
+                                  >
+                                    <div className={cn('h-full w-full rounded-full', c.swatch)} />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Background opacity */}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-2">Background</p>
+                              <div className="flex gap-1">
+                                {BG_OPACITIES.map(b => (
+                                  <button
+                                    key={b.value}
+                                    onClick={() => setSubSettings({ ...subSettings, bgOpacity: b.value })}
+                                    className={cn(
+                                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                                      subSettings.bgOpacity === b.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                                    )}
+                                  >
+                                    {b.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Position */}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-2">Position</p>
+                              <div className="flex gap-1">
+                                {POSITIONS.map(p => (
+                                  <button
+                                    key={p.value}
+                                    onClick={() => setSubSettings({ ...subSettings, position: p.value })}
+                                    className={cn(
+                                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                                      subSettings.position === p.value ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                                    )}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
