@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { X, Play, Star, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Play, Star, Clock, LayoutGrid, List } from 'lucide-react'
 import { TrailerDialog } from './TrailerDialog'
 import { api } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
@@ -165,14 +165,14 @@ export function MediaDrawer() {
             <div className="p-6 space-y-6">
               {/* Actions */}
               <div className="flex gap-3">
-                <button onClick={handlePlay} className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                <button onClick={handlePlay} className="flex items-center gap-2 rounded-full bg-primary px-7 py-2.5 text-sm font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:scale-105">
                   <Play className="h-4 w-4 fill-current" />
                     {t('drawer.play')}
                   </button>
                 {trailer && (
                   <button
                     onClick={() => setTrailerOpen(true)}
-                    className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted"
+                    className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all hover:bg-white/20 hover:text-white hover:scale-105"
                   >
                     {t('drawer.trailer')}
                   </button>
@@ -197,8 +197,8 @@ export function MediaDrawer() {
                           <option key={s.id} value={s.season_number}>{s.name || `Season ${s.season_number}`}</option>
                         ))}
                       </select>
-                      <button onClick={() => setEpisodeView(p => p === 'grid' ? 'list' : 'grid')} className="rounded-md bg-muted p-1.5 text-muted-foreground hover:text-foreground">
-                        {episodeView === 'grid' ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                      <button onClick={() => setEpisodeView(p => p === 'grid' ? 'list' : 'grid')} className="rounded-md bg-muted p-1.5 text-muted-foreground hover:text-foreground" aria-label={episodeView === 'grid' ? t('drawer.list') : t('drawer.grid')}>
+                        {episodeView === 'grid' ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
