@@ -25,6 +25,7 @@ interface TmdbMovie {
   release_date: string
   vote_average: number
   genre_ids: number[]
+  media_type?: string
 }
 
 interface TmdbTv {
@@ -36,6 +37,7 @@ interface TmdbTv {
   first_air_date: string
   vote_average: number
   genre_ids: number[]
+  media_type?: string
 }
 
 interface TmdbMediaDetail {
@@ -111,10 +113,15 @@ class TmdbService {
     return data.results
   }
 
+  /** Add media_type to TMDB results that are missing it */
+  private tagWith<T>(results: T[], mediaType: 'movie' | 'tv'): (T & { media_type: string })[] {
+    return results.map(r => ({ ...r, media_type: mediaType }))
+  }
+
   /** Get popular TV shows */
   async popularTv(page = 1, language = 'en-US'): Promise<TmdbTv[]> {
     const data = await this.fetch<TmdbResponse<TmdbTv>>('/tv/popular', { page: String(page), language })
-    return data.results
+    return this.tagWith(data.results, 'tv')
   }
 
   /** Get top-rated movies */
@@ -126,7 +133,7 @@ class TmdbService {
   /** Get top-rated TV shows */
   async topRatedTv(page = 1, language = 'en-US'): Promise<TmdbTv[]> {
     const data = await this.fetch<TmdbResponse<TmdbTv>>('/tv/top_rated', { page: String(page), language })
-    return data.results
+    return this.tagWith(data.results, 'tv')
   }
 
   /** Get movies by genre */
@@ -146,7 +153,7 @@ class TmdbService {
       page: String(page),
       language,
     })
-    return data.results
+    return this.tagWith(data.results, 'tv')
   }
 
   /** Search movies and TV shows */
