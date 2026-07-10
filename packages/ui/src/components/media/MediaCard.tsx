@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { Star, Play } from 'lucide-react'
 import { getImageUrl } from '@/lib/utils'
 import { useDrawer } from '@/app/providers/drawer-provider'
+import { StarRating } from '@/components/ui/StarRating'
 
 interface MediaCardProps {
   id: number
@@ -27,24 +28,23 @@ export const MediaCard = memo(function MediaCard({ id, type, title, posterPath, 
             src={getImageUrl(posterPath)!}
             alt={title}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.08]"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            No Image
-          </div>
+          <img
+            src="/icon.svg"
+            alt={title}
+            className="h-full w-full object-cover p-8 opacity-30"
+          />
         )}
 
         {/* Hover gradient overlay with metadata */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
-          <p className="text-sm font-medium text-white line-clamp-1">{title}</p>
-          {year && <p className="text-xs text-white/60 mt-0.5">{year}</p>}
-          {rating > 0 && (
-            <div className="flex items-center gap-1 mt-1">
-              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs text-white/80">{rating.toFixed(1)}</span>
-            </div>
-          )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+          <p className="text-sm leading-tight font-semibold text-white line-clamp-1">{title}</p>
+          <div className="mt-1 flex w-full items-center justify-between text-xs font-medium">
+            <StarRating rating={rating} />
+            {year && <span className="text-white/70">{year}</span>}
+          </div>
         </div>
 
         {/* Play icon overlay */}
@@ -54,6 +54,7 @@ export const MediaCard = memo(function MediaCard({ id, type, title, posterPath, 
           </div>
         </div>
 
+        {/* Persistent rating badge (kept per user request) */}
         {rating > 0 && (
           <div className="absolute top-2 right-2 flex items-center gap-0.5 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium backdrop-blur-sm">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -62,6 +63,7 @@ export const MediaCard = memo(function MediaCard({ id, type, title, posterPath, 
         )}
       </div>
 
+      {/* Title and year below card */}
       <div className="mt-2">
         <p className="text-sm font-medium line-clamp-1">{title}</p>
         {year && <p className="text-xs text-muted-foreground">{year}</p>}
