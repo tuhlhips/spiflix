@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Search, Settings, Film, Tv, Compass, Menu, X, Globe } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Search, Settings, Film, Menu, X, Globe } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SearchDialog } from './SearchDialog'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 
 const navLinks = [
-  { to: '/', label: 'Home', icon: Film },
-  { to: '/movies', label: 'Movies', icon: Film },
-  { to: '/shows', label: 'TV Shows', icon: Tv },
-  { to: '/discover', label: 'Discover', icon: Compass },
+  { to: '/', labelKey: 'nav.home' },
+  { to: '/movies', labelKey: 'nav.movies' },
+  { to: '/shows', labelKey: 'nav.shows' },
+  { to: '/discover', labelKey: 'nav.discover' },
 ]
 
 export function Header() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const location = useLocation()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const [backendOnline, setBackendOnline] = useState(false)
 
   useEffect(() => {
@@ -40,72 +40,66 @@ export function Header() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handler, { passive: true })
-    return () => window.removeEventListener('scroll', handler)
-  }, [])
-
   return (
     <>
-      <header
-        className={cn(
-          'sticky top-0 z-50 transition-all duration-300',
-          scrolled
-            ? 'bg-background/80 backdrop-blur-xl border-b border-border/50'
-            : 'bg-transparent',
-        )}
-      >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+      <header className="fixed top-0 left-0 z-50 flex w-full justify-center pt-4">
+        <div
+          className={cn(
+            'relative inline-flex items-center gap-1 overflow-hidden rounded-full border border-border/50',
+            'bg-background/80 backdrop-blur-xl px-1.5 py-1.5',
+            'shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.05),0_4px_16px_rgba(0,0,0,0.1),0_8px_24px_rgba(0,0,0,0.08)]',
+          )}
+        >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold text-primary">
-            <Film className="h-6 w-6" />
-            <span className="hidden sm:inline">{t('app.name')}</span>
+          <Link to="/" className="mr-1 flex items-center px-2">
+            <Film className="h-8 w-auto text-primary" />
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ to, label }) => (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  'px-3 py-2 text-sm rounded-lg transition-colors',
-                  location.pathname === to
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          {/* Nav links */}
+          <div className="hidden items-center sm:flex">
+            {navLinks.map((link) => {
+              const active = location.pathname === link.to
+              return (
+                <Link key={link.to} to={link.to} className="relative px-3 py-2">
+                  <span className={cn(
+                    'relative z-10 text-sm font-medium transition-colors',
+                    active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}>
+                    {t(link.labelKey)}
+                  </span>
+                  {active && (
+                    <div className="absolute inset-0 rounded-full bg-primary/10" />
+                  )}
+                </Link>
+              )
+            })}
+          </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
-            {/* Backend status */}
-            <div
-              className="flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1"
-              title={backendOnline ? t('header.connected') : t('header.disconnected')}
-            >
-              <div className={cn('h-1.5 w-1.5 rounded-full', backendOnline ? 'bg-green-500' : 'bg-red-500')} />
-              <Globe className="h-3 w-3 text-muted-foreground" />
-            </div>
-
+          <div className="flex items-center gap-0.5 px-1">
+            {/* Search */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label={t('header.search')}
             >
               <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('header.search')}</span>
-              <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 text-[10px] font-mono">
-                ⌘F
-              </kbd>
             </button>
 
+            {/* Backend status */}
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title={backendOnline ? t('header.connected') : t('header.disconnected')}
+            >
+              <Globe className={cn('h-4 w-4', backendOnline ? 'text-green-500' : 'text-red-500')} />
+            </button>
+
+            {/* Settings */}
             <Link
               to="/settings"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label={t('nav.settings')}
             >
               <Settings className="h-4 w-4" />
             </Link>
@@ -113,35 +107,34 @@ export function Header() {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="flex md:hidden h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+              className="flex sm:hidden h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              aria-label="Menu"
             >
               {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile nav */}
+        {/* Mobile nav dropdown */}
         {mobileMenuOpen && (
-          <nav className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl">
-            <div className="flex flex-col p-2">
-              {navLinks.map(({ to, label, icon: Icon }) => (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-[90vw] max-w-sm rounded-xl border border-border bg-background/95 backdrop-blur-xl p-2 shadow-xl">
+            {navLinks.map(({ to, labelKey }) => {
+              const active = location.pathname === to
+              return (
                 <Link
                   key={to}
                   to={to}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
-                    location.pathname === to
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    active ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {label}
+                  {t(labelKey)}
                 </Link>
-              ))}
-            </div>
-          </nav>
+              )
+            })}
+          </div>
         )}
       </header>
 
