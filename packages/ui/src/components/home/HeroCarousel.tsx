@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Star, ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { Play, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { api } from '@/lib/api'
-import { getImageUrl } from '@/lib/utils'
+import { getImageUrl, cn } from '@/lib/utils'
 import { useDrawer } from '@/app/providers/drawer-provider'
+import { StarRating } from '@/components/ui/StarRating'
 
 interface HeroSlide {
   id: number
@@ -29,6 +30,7 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
   const [current, setCurrent] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const [paused, setPaused] = useState(false)
+  const progressRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchers = type === 'movie'
@@ -84,95 +86,92 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
 
   return (
     <div
-      className="relative h-[75vh] sm:h-[85vh] overflow-hidden"
+      className="group relative h-[80vh] md:h-screen overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {slides.map((s, i) => (
         <div
           key={s.id}
-          className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0'}`}
+          className={cn('absolute inset-0 transition-opacity duration-700', i === current ? 'opacity-100' : 'opacity-0')}
         >
           {s.backdropPath && (
-            <img
-              src={getImageUrl(s.backdropPath, 'original')!}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <img src={getImageUrl(s.backdropPath, 'original')!} alt="" className="h-full w-full object-cover" />
           )}
         </div>
       ))}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent" />
+      {/* Gradient overlay matching reference diagonal style */}
+      <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(0,0,0,0.92)_10%,rgba(0,0,0,0.45)_45%,rgba(0,0,0,0.82)_100%)]" />
 
-      <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-12">
-        <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-xs font-medium text-primary">
-              <Star className="h-3.5 w-3.5 fill-current" />
-              {slide.rating.toFixed(1)}
+      {/* Content */}
+      <div className="relative z-10 flex h-full items-end pb-18 sm:pb-23">
+        <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12">
+          <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-wrap items-center gap-4 text-sm mb-4 sm:text-base">
+              <StarRating rating={slide.rating} />
+              {slide.year && <span className="text-white/70">{slide.year}</span>}
+              <span className="rounded-full bg-muted/30 px-2.5 py-0.5 text-xs font-medium text-white/80 uppercase">
+                {slide.type}
+              </span>
             </div>
-            {slide.year && (
-              <span className="text-xs text-muted-foreground">{slide.year}</span>
-            )}
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase">
-              {slide.type}
-            </span>
-          </div>
 
-          <h1 className="text-3xl sm:text-5xl font-bold mb-3 line-clamp-2">
-            {slide.title}
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground line-clamp-3 mb-6 max-w-xl">
-            {slide.overview}
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate(slide.type === 'movie' ? `/watch/movie/${slide.id}` : `/watch/tv/${slide.id}?s=1&e=1`)}
-              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:scale-105"
-            >
-              <Play className="h-4 w-4 fill-current" />
-              Watch Now
-            </button>
-            <button
-              onClick={() => openDrawer({ id: slide.id, type: slide.type })}
-              className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-105"
-            >
-              <Info className="h-4 w-4" />
-              More Info
-            </button>
+            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold mb-3 line-clamp-2 text-white drop-shadow-2xl">
+              {slide.title}
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-white/70 sm:text-base line-clamp-3 mb-6">
+              {slide.overview}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate(slide.type === 'movie' ? `/watch/movie/${slide.id}` : `/watch/tv/${slide.id}?s=1&e=1`)}
+                className="flex items-center gap-2 rounded-full bg-primary px-7 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:scale-105"
+              >
+                <Play className="h-4 w-4 fill-current" />
+                Watch Now
+              </button>
+              <button
+                onClick={() => openDrawer({ id: slide.id, type: slide.type })}
+                className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all hover:bg-white/20 hover:text-white hover:scale-105"
+              >
+                <Info className="h-4 w-4" />
+                More Info
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Progress dots */}
-      <div className="absolute bottom-4 right-4 sm:right-12 flex gap-1.5">
+      {/* Progress dots — centered, with animated progress bar */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
         {slides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-8 bg-primary' : 'w-1.5 bg-white/40 hover:bg-white/60'}`}
-          />
+          <button key={i} onClick={() => setCurrent(i)} className="group/dot relative h-2.5 rounded-full transition-all duration-300" style={{ width: i === current ? '40px' : '10px' }}>
+            <div className={cn(
+              'h-full w-full rounded-full transition-colors duration-300',
+              i === current ? 'bg-primary/20' : 'bg-white/30 hover:bg-white/50',
+            )}>
+              {i === current && (
+                <div
+                  ref={progressRef}
+                  className="h-full w-full rounded-full bg-primary animate-[carousel-progress_6.5s_linear]"
+                  style={{ animationPlayState: paused ? 'paused' : 'running' }}
+                />
+              )}
+            </div>
+          </button>
         ))}
       </div>
 
-      {/* Navigation arrows */}
+      {/* Navigation arrows — group-hover reveals */}
       <button
         onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 group-hover:opacity-100"
-        style={{ opacity: 0 }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
+        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60"
       >
         <ChevronLeft className="h-6 w-6" />
       </button>
       <button
         onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60"
-        style={{ opacity: 0 }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
+        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60"
       >
         <ChevronRight className="h-6 w-6" />
       </button>
