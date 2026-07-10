@@ -1,4 +1,4 @@
-const INTRODB_BASE = 'https://api.introdb.app'
+const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '')
 
 export type SegmentType = 'intro' | 'recap' | 'outro' | 'credits' | 'preview'
 
@@ -37,7 +37,7 @@ export async function fetchSegments(
   if (season != null) params.set('season', String(season))
   if (episode != null) params.set('episode', String(episode))
 
-  const res = await fetch(`${INTRODB_BASE}/segments?${params}`, { signal })
+  const res = await fetch(`${BASE_URL}/api/introdb/segments?${params}`, { signal })
 
   if (res.status === 404) return []
   if (!res.ok) throw new Error(`IntroDB ${res.status}`)

@@ -8,6 +8,7 @@ import { sourceRoutes } from './routes/sources.js'
 import { proxyRoutes } from './routes/proxy.js'
 import { tmdbRoutes } from './routes/tmdb.js'
 import { healthRoutes } from './routes/health.js'
+import { introdbRoutes } from './routes/introdb.js'
 
 /**
  * App factory — creates and configures the Fastify instance.
@@ -49,6 +50,7 @@ export async function createApp() {
   await app.register(proxyRoutes)
   await app.register(tmdbRoutes)
   await app.register(healthRoutes)
+  await app.register(introdbRoutes)
 
   return app
 }
