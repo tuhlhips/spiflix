@@ -167,12 +167,12 @@ class TmdbService {
 
   /** Get movie details */
   async movieDetails(id: number, language = 'en-US'): Promise<TmdbMediaDetail> {
-    return this.fetch<TmdbMediaDetail>(`/movie/${id}`, { append_to_response: 'videos,credits,recommendations,images', language })
+    return this.fetch<TmdbMediaDetail>(`/movie/${id}`, { append_to_response: 'videos,credits,recommendations,images,external_ids', language })
   }
 
   /** Get TV show details */
   async tvDetails(id: number, language = 'en-US'): Promise<TmdbMediaDetail> {
-    return this.fetch<TmdbMediaDetail>(`/tv/${id}`, { append_to_response: 'videos,credits,recommendations,images', language })
+    return this.fetch<TmdbMediaDetail>(`/tv/${id}`, { append_to_response: 'videos,credits,recommendations,images,external_ids', language })
   }
 
   /** Get season details for a TV show */

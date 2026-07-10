@@ -6,8 +6,10 @@ import { api } from '@/lib/api'
 import { formatTime, cn } from '@/lib/utils'
 import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import { useHistory } from '@/app/providers/history-provider'
+import { usePersistentState } from '@/hooks/useLocalStorage'
 import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
 import { getPreferredSource, isHls } from '@/utils/playback'
+import { fetchSegments, type IntroDBSegment } from '@/services/introdb'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -77,6 +79,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<AudioTrack | null>(null)
   const [subSettings, setSubSettings] = useSubtitleSettings()
+  const [introSegments, setIntroSegments] = useState<IntroDBSegment[]>([])
+  const [activeSegment, setActiveSegment] = useState<IntroDBSegment | null>(null)
+  const [autoSkipIntro] = usePersistentState('spiflix-auto-skip-intro', false)
 
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -113,14 +118,33 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     return () => { cancelled = true }
   }, [tmdbId, type, season, episode])
 
-  // Fetch title
+  // Fetch title + IMDb ID + IntroDB segments
   useEffect(() => {
     let cancelled = false
+
     api.tmdb.details(type, tmdbId)
-      .then(data => { if (!cancelled) setTitle(data.title || data.name || '') })
+      .then(data => {
+        if (cancelled) return
+        setTitle(data.title || data.name || '')
+
+        // Extract imdb_id from external_ids (TV) or direct field (movie)
+        const imdbId = data.imdb_id || data.external_ids?.imdb_id
+        if (!imdbId) return
+
+        // Fetch IntroDB segments for intro/recap/outro timing
+        const controller = new AbortController()
+        fetchSegments(imdbId, season, episode, controller.signal)
+          .then(segs => { if (!cancelled) setIntroSegments(segs) })
+          .catch(err => {
+            if (err.name !== 'AbortError') console.warn('IntroDB fetch failed (non-fatal):', err)
+          })
+
+        return () => controller.abort()
+      })
       .catch(() => {})
+
     return () => { cancelled = true }
-  }, [tmdbId, type])
+  }, [tmdbId, type, season, episode])
 
   // Attach HLS.js when source changes
   useEffect(() => {
@@ -367,6 +391,20 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     setCurrentQuality(level)
   }
 
+  // Compute active segment based on currentTime
+  useEffect(() => {
+    const seg = introSegments.find(s => currentTime >= s.start_sec && currentTime <= s.end_sec - 1) ?? null
+    setActiveSegment(prev => prev?.segment_type === seg?.segment_type ? prev : seg)
+  }, [currentTime, introSegments])
+
+  // Auto-skip intro if enabled
+  useEffect(() => {
+    if (autoSkipIntro && activeSegment?.segment_type === 'intro' && videoRef.current) {
+      videoRef.current.currentTime = activeSegment.end_sec
+      setActiveSegment(null)
+    }
+  }, [autoSkipIntro, activeSegment])
+
   // Switch audio track when selected
   useEffect(() => {
     const hls = hlsRef.current
@@ -465,6 +503,20 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             </div>
           </div>
         </div>
+      )}
+
+      {/* Skip segment button */}
+      {activeSegment && (
+        <button
+          onClick={() => {
+            if (videoRef.current) videoRef.current.currentTime = activeSegment.end_sec
+            setActiveSegment(null)
+          }}
+          className="absolute bottom-24 right-6 z-30 px-5 py-2 rounded-md bg-background/80 backdrop-blur-sm border border-border text-sm font-medium text-foreground hover:bg-background transition-all duration-150 animate-in fade-in slide-in-from-bottom-2 duration-200"
+          aria-label={t(`controls.skip_${activeSegment.segment_type}`)}
+        >
+          {t(`controls.skip_${activeSegment.segment_type}`)}
+        </button>
       )}
 
       {/* Controls overlay */}

@@ -21,7 +21,12 @@
     "play_next": "Play Next",
     "cancel": "Cancel",
     "seek": "Seek",
-    "volume": "Volume"
+    "volume": "Volume",
+    "skip_intro": "Skip Intro",
+    "skip_recap": "Skip Recap",
+    "skip_outro": "Skip Outro",
+    "skip_credits": "Skip Credits",
+    "skip_preview": "Skip Preview"
   },
   "settings": {
     "source": "Source",
