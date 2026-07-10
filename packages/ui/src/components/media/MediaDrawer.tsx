@@ -62,9 +62,11 @@ export function MediaDrawer() {
 
   useEffect(() => {
     if (!payload) { setData(null); return }
+    let cancelled = false
     setLoading(true)
     api.tmdb.details(payload.type, payload.id)
       .then((d: any) => {
+        if (cancelled) return
         const mediaType = payload.type
         setData({
           ...d,
@@ -77,7 +79,8 @@ export function MediaDrawer() {
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [payload])
 
   useEffect(() => {

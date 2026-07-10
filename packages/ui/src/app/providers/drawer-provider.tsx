@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 interface DrawerPayload {
@@ -15,24 +15,37 @@ interface DrawerContextType {
 const DrawerContext = createContext<DrawerContextType | null>(null)
 
 export function DrawerProvider({ children }: { children: ReactNode }) {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const mediaParam = searchParams.get('media')
+  const [searchParams] = useSearchParams()
+  const [payload, setPayload] = useState<DrawerPayload | null>(() => {
+    const media = searchParams.get('media')
+    if (!media) return null
+    const [type, id] = media.split(':')
+    if (type && id) return { type: type as 'movie' | 'tv', id: Number(id) }
+    return null
+  })
 
-  const payload: DrawerPayload | null = mediaParam
-    ? (() => {
-        const [type, id] = mediaParam.split(':')
-        if (type && id) return { type: type as 'movie' | 'tv', id: Number(id) }
-        return null
-      })()
-    : null
+  // Sync URL to state on mount (for deep linking)
+  useEffect(() => {
+    const media = searchParams.get('media')
+    if (!media) { setPayload(null); return }
+    const [type, id] = media.split(':')
+    if (type && id) setPayload({ type: type as 'movie' | 'tv', id: Number(id) })
+  }, [searchParams])
 
   const open = useCallback((p: DrawerPayload) => {
-    setSearchParams({ media: `${p.type}:${p.id}` }, { replace: true })
-  }, [setSearchParams])
+    setPayload(p)
+    // Sync to URL without using searchParams setter (avoid transition delay)
+    const url = new URL(window.location.href)
+    url.searchParams.set('media', `${p.type}:${p.id}`)
+    window.history.replaceState(null, '', url.toString())
+  }, [])
 
   const close = useCallback(() => {
-    setSearchParams({}, { replace: true })
-  }, [setSearchParams])
+    setPayload(null)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('media')
+    window.history.replaceState(null, '', url.toString())
+  }, [])
 
   return (
     <DrawerContext.Provider value={{ payload, open, close }}>
