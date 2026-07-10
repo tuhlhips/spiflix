@@ -35,9 +35,22 @@ export const MediaCard = memo(function MediaCard({ id, type, title, posterPath, 
           </div>
         )}
 
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Play className="h-4 w-4 fill-current" />
+        {/* Hover gradient overlay with metadata */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
+          <p className="text-sm font-medium text-white line-clamp-1">{title}</p>
+          {year && <p className="text-xs text-white/60 mt-0.5">{year}</p>}
+          {rating > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-xs text-white/80">{rating.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Play icon overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+            <Play className="h-4 w-4 fill-current ml-0.5" />
           </div>
         </div>
 
