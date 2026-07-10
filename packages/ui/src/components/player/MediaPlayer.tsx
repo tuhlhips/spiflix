@@ -161,6 +161,8 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     setQualities([])
     setCurrentQuality(-1)
 
+    let watchId: ReturnType<typeof setTimeout> | undefined
+
     if (isHls(selectedSource)) {
       if (Hls.isSupported()) {
         const hls = new Hls({ enableWorker: true, lowLatencyMode: false })
@@ -175,27 +177,44 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             setQualities(hls.levels.map((l, i) => ({ index: i, height: l.height, label: `${l.height}p` })))
           }
 
-          // Read audio tracks from HLS manifest and set preferred language
-          if (hls.audioTracks.length > 0) {
-            const tracks = hls.audioTracks.map(t => ({ language: t.lang || '', label: t.name || t.lang || `Track ${t.id}` }))
-            setAudioTracks(tracks)
-
-            const preferred = findPreferredAudioTrack(
-              hls.audioTracks as any,
-              getPreferredAudioLang(),
-            )
-            if (preferred) {
-              hls.audioTrack = preferred.id
-              setSelectedAudioTrack(tracks[preferred.id])
-            }
-          }
-
           const resume = getResumeTime()
           if (resume && video.duration > 0) {
             video.currentTime = resume
           }
           video.play().catch(() => {})
         })
+
+        // Audio tracks are NOT available at MANIFEST_PARSED on this stream.
+        // They populate lazily after AUDIO_TRACK_LOADING. Listen to
+        // AUDIO_TRACKS_UPDATED to set the preferred language once tracks arrive.
+        let initialAudioTrackSet = false
+        const preferredLang = getPreferredAudioLang()
+
+        hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_event, data) => {
+          const tracks = data.audioTracks
+          if (!tracks || tracks.length === 0 || initialAudioTrackSet) return
+          initialAudioTrackSet = true
+
+          const preferred = findPreferredAudioTrack(tracks, preferredLang)
+          if (preferred && preferred.id !== hls.audioTrack) {
+            hls.audioTrack = preferred.id
+            setSelectedAudioTrack({ language: tracks[preferred.id].lang ?? '', label: tracks[preferred.id].name ?? tracks[preferred.id].lang ?? `Track ${preferred.id}` })
+            console.info(`[Player] Audio track set to: ${preferred.name ?? preferred.lang} (id: ${preferred.id})`)
+          }
+        })
+
+        // Watchdog: if after 3 seconds the active track isn't preferred, re-apply
+        watchId = setTimeout(() => {
+          if (initialAudioTrackSet) return
+          const track = hls.audioTracks?.[hls.audioTrack]
+          if (track) {
+            const preferred = findPreferredAudioTrack(hls.audioTracks, preferredLang)
+            if (preferred && preferred.id !== hls.audioTrack) {
+              hls.audioTrack = preferred.id
+              console.warn('[Player] Watchdog re-applied audio track selection')
+            }
+          }
+        }, 3000)
 
         hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
           setCurrentQuality(data.level)
@@ -220,7 +239,15 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       video.src = url
     }
 
-    return () => { hlsRef.current?.destroy() }
+    return () => {
+      clearTimeout(watchId)
+      // hlsRef.current?.destroy() is called at the top of this effect when a new source is selected
+      // and in the cleanup below. Avoid double-destroy.
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
   }, [selectedSource])
 
   useEffect(() => {
