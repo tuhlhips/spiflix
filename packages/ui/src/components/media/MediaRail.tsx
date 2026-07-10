@@ -62,9 +62,9 @@ export function MediaRail({ title, fetcher, isLoading: externalLoading, mapper =
   if (!loading && items.length === 0) return null
 
   return (
-    <section className="py-4">
+    <section className="space-y-4">
       <div className="flex items-center justify-between px-4 sm:px-6 mb-3">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-2xl font-semibold">{title}</h2>
         <div className="flex gap-1">
           <button
             onClick={scrollPrev}
@@ -85,7 +85,7 @@ export function MediaRail({ title, fetcher, isLoading: externalLoading, mapper =
 
       {loading ? (
         <div className="flex gap-3 overflow-hidden px-4 sm:px-6">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="w-[150px] sm:w-[180px] shrink-0">
               <div className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
             </div>
