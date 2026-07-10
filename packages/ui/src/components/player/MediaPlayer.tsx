@@ -10,6 +10,7 @@ import { usePersistentState } from '@/hooks/useLocalStorage'
 import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
 import { getPreferredSource, isHls } from '@/utils/playback'
 import { fetchSegments, type IntroDBSegment } from '@/services/introdb'
+import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang } from '@/utils/audio'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -174,16 +175,18 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             setQualities(hls.levels.map((l, i) => ({ index: i, height: l.height, label: `${l.height}p` })))
           }
 
-          // Read audio tracks from HLS manifest
+          // Read audio tracks from HLS manifest and set preferred language
           if (hls.audioTracks.length > 0) {
             const tracks = hls.audioTracks.map(t => ({ language: t.lang || '', label: t.name || t.lang || `Track ${t.id}` }))
             setAudioTracks(tracks)
 
-            // Default to English if available (defer to ensure HLS.js processes the switch)
-            const engIdx = hls.audioTracks.findIndex(t => t.lang?.startsWith('en'))
-            if (engIdx >= 0) {
-              setSelectedAudioTrack(tracks[engIdx])
-              setTimeout(() => { hls.audioTrack = engIdx }, 100)
+            const preferred = findPreferredAudioTrack(
+              hls.audioTracks as any,
+              getPreferredAudioLang(),
+            )
+            if (preferred) {
+              hls.audioTrack = preferred.id
+              setSelectedAudioTrack(tracks[preferred.id])
             }
           }
 
@@ -415,6 +418,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     )
     if (idx >= 0 && idx !== hls.audioTrack) {
       hls.audioTrack = idx
+      setPreferredAudioLang(hls.audioTracks[idx].lang || hls.audioTracks[idx].name || 'en')
     }
   }, [selectedAudioTrack])
 
