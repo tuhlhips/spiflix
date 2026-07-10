@@ -552,7 +552,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
       {/* Controls overlay */}
       {showControls && !error && (
-        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-transparent to-black/40">
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/20 via-transparent to-black/15">
           {/* Top bar — title */}
           <div className="absolute top-0 left-0 right-0 p-4">
             <h1 className="text-white text-lg font-medium line-clamp-1">
@@ -585,7 +585,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             {/* Control buttons */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <button onClick={togglePlay} className="text-white hover:text-white/80" aria-label={playing ? 'Pause' : 'Play'} aria-pressed={playing}>
+                <button onClick={togglePlay} className="text-white hover:bg-white/20 rounded-full p-1.5 transition-colors" aria-label={playing ? 'Pause' : 'Play'} aria-pressed={playing}>
                   {playing ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 fill-current" />}
                 </button>
 
@@ -630,7 +630,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   aria-valuenow={Math.round((muted ? 0 : volume) * 100)}
                 />
 
-                <span className="text-xs text-white/70 ml-2">
+                <span className="text-sm font-medium text-white/90 tabular-nums ml-2">
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
               </div>
