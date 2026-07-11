@@ -81,20 +81,15 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
       document.head.appendChild(style)
     }
 
-    const bgMap = { none: '0', low: '0.3', medium: '0.6', high: '0.85' }
-    const sizeMap = { sm: '14px', md: '18px', lg: '24px', xl: '32px' }
-    
+    const bgMap: Record<string, string> = { none: '0', low: '0.3', medium: '0.6', high: '0.85' }
+    const sizeMap: Record<string, string> = { sm: '14px', md: '18px', lg: '24px', xl: '32px' }
 
     style.textContent = `
       video::cue {
-        font-size: ${sizeMap[settings.fontSize]} !important;
-        color: ${settings.color} !important;
-        background: rgba(0,0,0,${bgMap[settings.bgOpacity]}) !important;
-        font-family: system-ui, -apple-system, sans-serif !important;
-        text-shadow: none !important;
-      }
-      video::cue(.bg-black\\/60) {
-        background: rgba(0,0,0,${bgMap[settings.bgOpacity]}) !important;
+        font-size: ${sizeMap[settings.fontSize]};
+        color: ${settings.color};
+        background-color: rgba(0,0,0,${bgMap[settings.bgOpacity]});
+        font-family: system-ui, -apple-system, sans-serif;
       }
     `
   }, [settings, videoRef])
