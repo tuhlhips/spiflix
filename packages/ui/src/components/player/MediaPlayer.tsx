@@ -11,6 +11,7 @@ import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from
 import { getPreferredSource, isHls } from '@/utils/playback'
 import { fetchSegments, type IntroDBSegment } from '@/services/introdb'
 import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang } from '@/utils/audio'
+import { usePresenceMeta } from '@/hooks/usePresenceMeta'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -65,6 +66,8 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [sources, setSources] = useState<Source[]>([])
   const [selectedSource, setSelectedSource] = useState<Source | null>(null)
   const [title, setTitle] = useState('')
+  const [posterPath, setPosterPath] = useState<string | null>(null)
+  const [episodeTitle, setEpisodeTitle] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('source')
@@ -83,6 +86,8 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [introSegments, setIntroSegments] = useState<IntroDBSegment[]>([])
   const [activeSegment, setActiveSegment] = useState<IntroDBSegment | null>(null)
   const [autoSkipIntro] = usePersistentState('spiflix-auto-skip-intro', false)
+
+  usePresenceMeta({ title, posterPath, type, season, episode, episodeTitle })
 
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -127,6 +132,8 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       .then(data => {
         if (cancelled) return
         setTitle(data.title || data.name || '')
+        setPosterPath(data.poster_path || null)
+        setEpisodeTitle(data.name || data.last_episode_to_air?.name || null)
 
         // Extract imdb_id from external_ids (TV) or direct field (movie)
         const imdbId = data.imdb_id || data.external_ids?.imdb_id
