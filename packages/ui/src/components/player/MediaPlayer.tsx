@@ -185,7 +185,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           }
 
           const resume = getResumeTime()
-          if (resume && video.duration > 0) {
+          if (resume) {
             video.currentTime = resume
           }
           video.play().catch(() => {})
