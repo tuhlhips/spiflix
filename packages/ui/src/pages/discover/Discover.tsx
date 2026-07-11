@@ -70,8 +70,7 @@ export default function Discover() {
         if (items.length > 0) {
           const pick = items[Math.floor(Math.random() * items.length)]
           setResults([pick])
-          setPage(randomPage)
-          toast.success(`Found: ${pick.title || pick.name}`)
+          toast.success(`Surprise! ${pick.title || pick.name}`)
         }
       })
       .catch(() => toast.error('Failed to find something'))
