@@ -34,16 +34,17 @@ export function usePlaybackProgress(
 
   const save = (currentTime: number, duration: number) => {
     if (currentTime < 5 || duration - currentTime < 5) return
+    console.log('[Playback] save key:', key, 'time:', currentTime, 'duration:', duration)
     setProgress({ currentTime, duration, timestamp: Date.now() })
   }
 
   const clear = () => setProgress(null)
 
-  // Reads from localStorage directly rather than from React state to avoid
-  // a stale closure: the HLS MANIFEST_PARSED handler fires before the
-  // persistent state has hydrated, so getResumeTime() would return null
-  // on first render. Direct localStorage reads are synchronous.
-  const getResumeTime = (): number | null => readProgress(key)
+  const getResumeTime = (): number | null => {
+    const saved = readProgress(key)
+    console.log('[Playback] getResumeTime key:', key, 'result:', saved)
+    return saved
+  }
 
   return { save, clear, getResumeTime, hasProgress: progress !== null }
 }
