@@ -133,7 +133,19 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         if (cancelled) return
         setTitle(data.title || data.name || '')
         setPosterPath(data.poster_path || null)
-        setEpisodeTitle(data.name || data.last_episode_to_air?.name || null)
+
+        // Fetch the real episode title from season data (not the series name)
+        if (type === 'tv' && season != null && episode != null) {
+          api.tmdb.season(tmdbId, season)
+            .then(seasonData => {
+              if (cancelled) return
+              const ep = seasonData.episodes?.find((e: any) => e.episode_number === episode)
+              if (ep?.name) setEpisodeTitle(ep.name)
+            })
+            .catch(() => {})
+        } else {
+          setEpisodeTitle(null)
+        }
 
         // Extract imdb_id from external_ids (TV) or direct field (movie)
         const imdbId = data.imdb_id || data.external_ids?.imdb_id
