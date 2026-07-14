@@ -12,7 +12,6 @@ import { getPreferredSource, isHls } from '@/utils/playback'
 import { fetchSegments, type IntroDBSegment } from '@/services/introdb'
 import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang } from '@/utils/audio'
 import { usePresenceMeta } from '@/hooks/usePresenceMeta'
-import { useSafeBack } from '@/hooks/useSafeBack'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
@@ -20,18 +19,6 @@ import {
   HardDrive, Captions, Gauge, Clapperboard, Check,
 } from 'lucide-react'
 import { CustomSubtitles } from './CustomSubtitles'
-
-type WebKitVideo = HTMLVideoElement & {
-  webkitEnterFullscreen?: () => void
-  webkitExitFullscreen?: () => void
-  webkitPresentationMode?: 'inline' | 'picture-in-picture' | 'fullscreen'
-  webkitSetPresentationMode?: (mode: 'inline' | 'picture-in-picture' | 'fullscreen') => void
-}
-
-type WebKitDocument = Document & {
-  webkitFullscreenElement?: Element | null
-  webkitExitFullscreen?: () => Promise<void> | void
-}
 
 interface MediaPlayerProps {
   tmdbId: number
@@ -64,7 +51,6 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const containerRef = useRef<HTMLDivElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const navigate = useNavigate()
-  const goBack = useSafeBack(type === 'tv' ? '/shows' : '/movies')
   const { save: saveProgress, getResumeTime, clear: clearProgress } = usePlaybackProgress(type, tmdbId, season, episode)
   const history = useHistory()
 
@@ -104,7 +90,6 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   usePresenceMeta({ title, posterPath, type, season, episode, episodeTitle })
 
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const stalledTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Fetch sources
   useEffect(() => {
@@ -112,13 +97,6 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     setLoading(true)
     setError(null)
     setShowAutoplay(false)
-    setSelectedSource(null)
-    const video = videoRef.current
-    if (video) {
-      video.pause()
-      video.removeAttribute('src')
-      video.load()
-    }
     clearTimeout(autoplayTimer.current)
 
     const fetcher = type === 'movie'
@@ -130,14 +108,13 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         if (cancelled) return
         setSources(data.sources || [])
         setSubtitles(data.subtitles || [])
+        setAudioTracks(data.sources?.[0]?.audioTracks || [])
         setSelectedSubtitle(null)
         setSelectedAudioTrack(null)
         const preferred = getPreferredSource(data.sources || [])
         if (preferred) {
-          setAudioTracks(data.sources?.[0]?.audioTracks || [])
           setSelectedSource(preferred)
         } else {
-          setAudioTracks([])
           setError(t('errors.no_sources'))
         }
       })
@@ -145,35 +122,48 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [tmdbId, type, season, episode, t])
+  }, [tmdbId, type, season, episode])
 
   // Fetch title + IMDb ID + IntroDB segments
   useEffect(() => {
     let cancelled = false
-    const controller = new AbortController()
 
     api.tmdb.details(type, tmdbId)
       .then(data => {
         if (cancelled) return
         setTitle(data.title || data.name || '')
         setPosterPath(data.poster_path || null)
-        setEpisodeTitle(data.name || data.last_episode_to_air?.name || null)
+
+        // Fetch the real episode title from season data (not the series name)
+        if (type === 'tv' && season != null && episode != null) {
+          api.tmdb.season(tmdbId, season)
+            .then(seasonData => {
+              if (cancelled) return
+              const ep = seasonData.episodes?.find((e: any) => e.episode_number === episode)
+              if (ep?.name) setEpisodeTitle(ep.name)
+            })
+            .catch(() => {})
+        } else {
+          setEpisodeTitle(null)
+        }
 
         // Extract imdb_id from external_ids (TV) or direct field (movie)
         const imdbId = data.imdb_id || data.external_ids?.imdb_id
         if (!imdbId) return
 
         // Fetch IntroDB segments for intro/recap/outro timing
+        const controller = new AbortController()
         fetchSegments(imdbId, season, episode, controller.signal)
           .then(segs => { if (!cancelled) setIntroSegments(segs) })
           .catch(err => {
             if (err.name !== 'AbortError') console.warn('IntroDB fetch failed (non-fatal):', err)
           })
 
+        return () => controller.abort()
       })
       .catch(() => {})
 
-    return () => { cancelled = true; controller.abort() }
+    return () => { cancelled = true }
   }, [tmdbId, type, season, episode])
 
   // Attach HLS.js when source changes
@@ -225,16 +215,10 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           initialAudioTrackSet = true
 
           const preferred = findPreferredAudioTrack(tracks, preferredLang)
-          if (preferred) {
-            // Only switch when it isn't already active, but always sync React
-            // state to it — otherwise, when the default track already matches
-            // the preference, selectedAudioTrack stays null forever and the
-            // Audio settings tab never shows any track as selected.
-            if (preferred.id !== hls.audioTrack) {
-              hls.audioTrack = preferred.id
-              console.info(`[Player] Audio track set to: ${preferred.name ?? preferred.lang} (id: ${preferred.id})`)
-            }
+          if (preferred && preferred.id !== hls.audioTrack) {
+            hls.audioTrack = preferred.id
             setSelectedAudioTrack({ language: tracks[preferred.id].lang ?? '', label: tracks[preferred.id].name ?? tracks[preferred.id].lang ?? `Track ${preferred.id}` })
+            console.info(`[Player] Audio track set to: ${preferred.name ?? preferred.lang} (id: ${preferred.id})`)
           }
         })
 
@@ -283,7 +267,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         hlsRef.current = null
       }
     }
-  }, [selectedSource, getResumeTime, t])
+  }, [selectedSource])
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = playbackRate
@@ -305,33 +289,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     }
     const onDurationChange = () => setDuration(video.duration)
     const onWaiting = () => setLoading(true)
-    const onPlaying = () => {
-      clearTimeout(stalledTimer.current)
-      setLoading(false)
-    }
-    const onStalled = () => {
-      setLoading(true)
-      clearTimeout(stalledTimer.current)
-      stalledTimer.current = window.setTimeout(() => {
-        if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA && !video.paused) setError(t('errors.playback_error'))
-      }, 5_000)
-    }
-    const onAbort = () => {
-      if (!video.paused) setError(t('errors.playback_error'))
-      setLoading(false)
-    }
-    const onError = () => {
-      setLoading(false)
-      setError(t('errors.playback_error'))
-    }
-    const onFullscreenChange = () => {
-      const webkitDocument = document as WebKitDocument
-      setFullscreen(Boolean(document.fullscreenElement || webkitDocument.webkitFullscreenElement))
-    }
-    const onWebKitPresentationModeChange = () => {
-      setIsPiP((video as WebKitVideo).webkitPresentationMode === 'picture-in-picture')
-      setFullscreen((video as WebKitVideo).webkitPresentationMode === 'fullscreen')
-    }
+    const onPlaying = () => setLoading(false)
     const onVolumeChange = () => { setVolume(video.volume); setMuted(video.muted) }
     const onEnded = () => {
       clearProgress()
@@ -347,12 +305,6 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     video.addEventListener('durationchange', onDurationChange)
     video.addEventListener('waiting', onWaiting)
     video.addEventListener('playing', onPlaying)
-    video.addEventListener('stalled', onStalled)
-    video.addEventListener('abort', onAbort)
-    video.addEventListener('error', onError)
-    video.addEventListener('webkitpresentationmodechanged', onWebKitPresentationModeChange)
-    document.addEventListener('fullscreenchange', onFullscreenChange)
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange)
     video.addEventListener('volumechange', onVolumeChange)
     video.addEventListener('ended', onEnded)
 
@@ -363,51 +315,16 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       video.removeEventListener('durationchange', onDurationChange)
       video.removeEventListener('waiting', onWaiting)
       video.removeEventListener('playing', onPlaying)
-      video.removeEventListener('stalled', onStalled)
-      video.removeEventListener('abort', onAbort)
-      video.removeEventListener('error', onError)
-      video.removeEventListener('webkitpresentationmodechanged', onWebKitPresentationModeChange)
-      document.removeEventListener('fullscreenchange', onFullscreenChange)
-      document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
-      clearTimeout(stalledTimer.current)
       video.removeEventListener('volumechange', onVolumeChange)
       video.removeEventListener('ended', onEnded)
     }
-  }, [tmdbId, type, season, episode, clearProgress, history, saveProgress, t, title])
-
-  const moveEpisode = useCallback(async (direction: 1 | -1) => {
-    if (type !== 'tv' || season === undefined || episode === undefined) return false
-    try {
-      const current = await api.tmdb.season(tmdbId, season) as { episodes?: Array<{ episode_number: number }> }
-      const episodes = current.episodes || []
-      const index = episodes.findIndex(item => item.episode_number === episode)
-      const adjacent = episodes[index + direction]
-      if (adjacent) {
-        navigate(`/watch/tv/${tmdbId}?s=${season}&e=${adjacent.episode_number}`)
-        return true
-      }
-
-      const details = await api.tmdb.details('tv', tmdbId) as { seasons?: Array<{ season_number: number; episode_count: number }> }
-      const seasons = (details.seasons || []).filter(item => item.episode_count > 0)
-      const seasonIndex = seasons.findIndex(item => item.season_number === season)
-      const nextSeason = seasons[seasonIndex + direction]
-      if (!nextSeason) return false
-      const target = await api.tmdb.season(tmdbId, nextSeason.season_number) as { episodes?: Array<{ episode_number: number }> }
-      const targetEpisodes = target.episodes || []
-      const targetEpisode = direction === 1 ? targetEpisodes[0] : targetEpisodes.at(-1)
-      if (!targetEpisode) return false
-      navigate(`/watch/tv/${tmdbId}?s=${nextSeason.season_number}&e=${targetEpisode.episode_number}`)
-      return true
-    } catch {
-      return false
-    }
-  }, [episode, navigate, season, tmdbId, type])
+  }, [tmdbId, type, season, episode])
 
   const handleAutoplayNext = useCallback(() => {
     setShowAutoplay(false)
     clearTimeout(autoplayTimer.current)
-    void moveEpisode(1)
-  }, [moveEpisode])
+    navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) + 1}`)
+  }, [tmdbId, season, episode, navigate])
 
   useEffect(() => {
     if (showAutoplay) {
@@ -486,38 +403,25 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   async function toggleFullscreen() {
     const container = containerRef.current
     if (!container) return
-    const webkitDocument = document as WebKitDocument
-    const video = videoRef.current as WebKitVideo | null
-    if (document.fullscreenElement || webkitDocument.webkitFullscreenElement || video?.webkitPresentationMode === 'fullscreen') {
-      if (document.fullscreenElement) await document.exitFullscreen()
-      else if (webkitDocument.webkitExitFullscreen) await webkitDocument.webkitExitFullscreen()
-      else video?.webkitExitFullscreen?.()
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
       setFullscreen(false)
     } else {
-      if (container.requestFullscreen) await container.requestFullscreen()
-      else video?.webkitEnterFullscreen?.()
+      await container.requestFullscreen()
       setFullscreen(true)
     }
   }
 
   async function togglePiP() {
-    const video = videoRef.current as WebKitVideo | null
+    const video = videoRef.current
     if (!video) return
     try {
-      if ('pictureInPictureEnabled' in document && document.pictureInPictureEnabled) {
-        if (document.pictureInPictureElement) {
-          await document.exitPictureInPicture()
-          setIsPiP(false)
-        } else {
-          await video.requestPictureInPicture()
-          setIsPiP(true)
-        }
-      } else if (video.webkitSetPresentationMode) {
-        const nextMode = video.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture'
-        video.webkitSetPresentationMode(nextMode)
-        setIsPiP(nextMode === 'picture-in-picture')
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+        setIsPiP(false)
       } else {
-        throw new Error('Picture in Picture is not supported')
+        await video.requestPictureInPicture()
+        setIsPiP(true)
       }
     } catch {}
   }
@@ -528,33 +432,6 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     const rect = e.currentTarget.getBoundingClientRect()
     const pct = (e.clientX - rect.left) / rect.width
     video.currentTime = pct * video.duration
-  }
-
-  const seekWithKeyboard = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const video = videoRef.current
-    if (!video) return
-
-    const step = 5
-    switch (e.key) {
-      case 'ArrowLeft':
-      case 'ArrowDown':
-        e.preventDefault()
-        video.currentTime = Math.max(0, video.currentTime - step)
-        break
-      case 'ArrowRight':
-      case 'ArrowUp':
-        e.preventDefault()
-        video.currentTime = Math.min(video.duration, video.currentTime + step)
-        break
-      case 'Home':
-        e.preventDefault()
-        video.currentTime = 0
-        break
-      case 'End':
-        e.preventDefault()
-        video.currentTime = video.duration
-        break
-    }
   }
 
   const handleQualityChange = (level: number) => {
@@ -601,7 +478,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       {/* Back button */}
       {showControls && (
         <button
-          onClick={goBack}
+          onClick={() => navigate(-1)}
           className="absolute top-4 left-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
           aria-label="Go back"
         >
@@ -636,7 +513,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           <div className="text-center">
             <p className="text-white text-lg mb-4">{error}</p>
             <button
-              onClick={goBack}
+              onClick={() => navigate(-1)}
               className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
             >
               {t('controls.go_back')}
@@ -694,7 +571,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
       {/* Controls overlay */}
       {showControls && !error && (
-        <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/20 via-transparent to-black/15">
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/20 via-transparent to-black/15">
           {/* Top bar — title */}
           <div className="absolute top-0 left-0 right-0 p-4">
             <h1 className="text-white text-lg font-medium line-clamp-1">
@@ -706,14 +583,12 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           </div>
 
           {/* Bottom controls */}
-          <div className="pointer-events-auto absolute bottom-0 left-0 right-0 p-4 space-y-2">
+          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
             {/* Seek bar */}
             <div
               onClick={seek}
-              onKeyDown={seekWithKeyboard}
               className="group relative h-1.5 w-full cursor-pointer rounded-full bg-white/20 transition-all hover:h-2.5"
               role="slider"
-              tabIndex={0}
               aria-label="Seek"
               aria-valuemin={0}
               aria-valuemax={Math.round(duration)}
@@ -735,7 +610,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
                 {type === 'tv' && (
                   <button
-                    onClick={() => void moveEpisode(-1)}
+                    onClick={() => navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) - 1}`)}
                     className="text-white/70 hover:text-white"
                           aria-label={t('controls.previous_episode')}
                   >
@@ -745,7 +620,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
                 {type === 'tv' && (
                   <button
-                    onClick={() => void moveEpisode(1)}
+                    onClick={() => navigate(`/watch/tv/${tmdbId}?s=${season}&e=${(episode || 1) + 1}`)}
                     className="text-white/70 hover:text-white"
                     aria-label={t('controls.next_episode')}
                   >
@@ -917,22 +792,19 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                             {audioTracks.length === 0 ? (
                               <p className="text-xs text-white/40 px-2 py-1">No audio tracks available</p>
                             ) : (
-                              audioTracks.map((track, i) => {
-                                const isSelected = selectedAudioTrack?.label === track.label && selectedAudioTrack?.language === track.language
-                                return (
-                                  <button
-                                    key={i}
-                                    onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
-                                    className={cn(
-                                      'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
-                                      isSelected ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
-                                    )}
-                                  >
-                                    <span>{track.label || track.language}</span>
-                                    {isSelected && <Check className="h-3 w-3" />}
-                                  </button>
-                                )
-                              })
+                              audioTracks.map((track, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
+                                  className={cn(
+                                    'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                    selectedAudioTrack === track ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
+                                  )}
+                                >
+                                  <span>{track.label || track.language}</span>
+                                  {selectedAudioTrack === track && <Check className="h-3 w-3" />}
+                                </button>
+                              ))
                             )}
                           </div>
                         )}

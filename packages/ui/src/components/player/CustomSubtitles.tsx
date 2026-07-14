@@ -1,36 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { parseVTT } from '@/lib/subtitles'
-import { useSubtitleSettings, type SubtitleSettings } from '@/hooks/useSubtitleSettings'
+import { useSubtitleSettings } from '@/hooks/useSubtitleSettings'
 
 interface CustomSubtitlesProps {
   url: string
   videoRef: React.RefObject<HTMLVideoElement | null>
 }
 
-/**
- * Position a cue per the user's subtitle-position setting. VTTCue has no
- * CSS-based positioning (::cue can't move the box), so "top" vs "bottom"
- * has to be applied per-cue via `line`/`snapToLines`.
- */
-function applyCuePosition(cue: VTTCue, position: SubtitleSettings['position']) {
-  if (position === 'top') {
-    cue.snapToLines = false
-    cue.line = 10
-  } else {
-    cue.snapToLines = true
-    cue.line = 'auto'
-  }
-}
-
 export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
   const trackRef = useRef<TextTrack | null>(null)
   const [settings] = useSubtitleSettings()
-  // Read inside the load effect without making it re-fetch the VTT file
-  // whenever settings change.
-  const positionRef = useRef(settings.position)
-  useEffect(() => {
-    positionRef.current = settings.position
-  }, [settings.position])
 
   useEffect(() => {
     const video = videoRef.current
@@ -67,7 +46,6 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
         for (const cue of cues) {
           try {
             const vttCue = new VTTCue(cue.start, cue.end, cue.text)
-            applyCuePosition(vttCue, positionRef.current)
             track.addCue(vttCue)
           } catch {}
         }
@@ -88,17 +66,6 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
       }
     }
   }, [url, videoRef])
-
-  // Re-apply position to the currently loaded cues when the setting changes
-  // (no need to re-fetch/re-parse the VTT file for this).
-  useEffect(() => {
-    const cues = trackRef.current?.cues
-    if (!cues) return
-    for (let i = 0; i < cues.length; i++) {
-      const cue = cues[i]
-      if (cue instanceof VTTCue) applyCuePosition(cue, settings.position)
-    }
-  }, [settings.position])
 
   // Apply subtitle styling via CSS custom properties on the video element
   useEffect(() => {

@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom'
 import { useHistory } from '@/app/providers/history-provider'
 import { getRegionOptions } from '@/utils/regions'
 import { api } from '@/lib/api'
-import { useSafeBack } from '@/hooks/useSafeBack'
 
 const themes = [
   { id: 'dark' as const, label: 'Dark', icon: Moon },
@@ -47,20 +46,13 @@ const regions = getRegionOptions()
 type Tab = 'appearance' | 'playback' | 'history' | 'backend' | 'tmdb'
 
 export default function Settings() {
-  const { t, i18n } = useTranslation('settings')
+  const { t } = useTranslation('settings')
   const navigate = useNavigate()
-  const goBack = useSafeBack('/')
   const [activeTab, setActiveTab] = useState<Tab>('appearance')
   const { theme, colorTheme, setTheme, setColorTheme } = useTheme()
   const [autoplayNext, setAutoplayNext] = usePersistentState('spiflix-autoplay-next', true)
   const [omssUrl, setOmssUrl] = usePersistentState('spiflix-omss-url', '')
-  // Locale is owned by i18next (and persisted by its own LanguageDetector
-  // cache) rather than usePersistentState: both previously wrote the same
-  // 'spiflix-locale' localStorage key but in incompatible formats (raw
-  // string vs JSON), and this screen never actually called
-  // i18n.changeLanguage(), so picking a language here had no visible effect.
-  const locale = i18n.resolvedLanguage?.split('-')[0] || 'en'
-  const setLocale = (code: string) => { void i18n.changeLanguage(code) }
+  const [locale, setLocale] = usePersistentState('spiflix-locale', 'en')
   const [region, setRegion] = usePersistentState('spiflix-region', 'US')
   const { items: watchHistory, clear: clearWatchHistory } = useHistory()
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null)
@@ -80,7 +72,7 @@ export default function Settings() {
   return (
     <div className="mx-auto max-w-4xl py-8 px-4 sm:px-6">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={goBack} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+        <button onClick={() => navigate(-1)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
           <ChevronLeft className="h-5 w-5" />
         </button>
         <h1 className="text-2xl font-bold">{t('title')}</h1>
@@ -188,7 +180,7 @@ export default function Settings() {
               {watchHistory.map((item) => {
                 const pct = item.duration > 0 ? Math.round((item.currentTime / item.duration) * 100) : 0
                 return (
-                  <button
+                  <div
                     key={`${item.type}-${item.id}`}
                     onClick={() => {
                       const path = item.type === 'movie'
@@ -196,7 +188,7 @@ export default function Settings() {
                         : `/watch/tv/${item.id}?s=1&e=1`
                       navigate(path)
                     }}
-                    className="flex w-full items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-muted transition-colors"
+                    className="flex items-center justify-between rounded-lg border border-border p-3 cursor-pointer hover:bg-muted transition-colors"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{item.title || `#${item.id}`}</p>
@@ -208,7 +200,7 @@ export default function Settings() {
                       </div>
                       <span className="text-xs text-muted-foreground">{pct}%</span>
                     </div>
-                  </button>
+                  </div>
                 )
               })}
             </div>

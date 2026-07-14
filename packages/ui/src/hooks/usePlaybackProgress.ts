@@ -34,12 +34,17 @@ export function usePlaybackProgress(
 
   const save = (currentTime: number, duration: number) => {
     if (currentTime < 5 || duration - currentTime < 5) return
+    console.log('[Playback] save key:', key, 'time:', currentTime, 'duration:', duration)
     setProgress({ currentTime, duration, timestamp: Date.now() })
   }
 
   const clear = () => setProgress(null)
 
-  const getResumeTime = (): number | null => readProgress(key)
+  const getResumeTime = (): number | null => {
+    const saved = readProgress(key)
+    console.log('[Playback] getResumeTime key:', key, 'result:', saved)
+    return saved
+  }
 
   return { save, clear, getResumeTime, hasProgress: progress !== null }
 }
