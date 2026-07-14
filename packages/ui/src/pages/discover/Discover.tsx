@@ -3,7 +3,6 @@ import { api } from '@/lib/api'
 import { MediaCard } from '@/components/media/MediaCard'
 import { Film, Tv, Shuffle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
 type SortOption = 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' | 'primary_release_date.asc' | 'original_title.asc'
 
@@ -35,18 +34,24 @@ export default function Discover() {
     setPage(1)
   }, [type])
 
-  useEffect(() => {
-    setLoading(true)
-    const fetcher = selectedGenre
-      ? () => api.tmdb.popular(type, page)
-      : () => api.tmdb.popular(type, page)
+  // Changing any filter narrows (or widens) the result set, so the page the
+  // user was on may no longer exist — reset to page 1 whenever a filter
+  // changes rather than only when the media type changes.
+  const updateGenre = (id: number | null) => { setSelectedGenre(id); setPage(1) }
+  const updateSort = (value: SortOption) => { setSort(value); setPage(1) }
+  const updateYearFrom = (value: number | '') => { setYearFrom(value); setPage(1) }
+  const updateYearTo = (value: number | '') => { setYearTo(value); setPage(1) }
 
-    fetcher()
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+
+    api.tmdb.popular(type, page)
       .then(items => {
+        if (cancelled) return
         let filtered = selectedGenre
           ? items.filter((m: any) => m.genre_ids?.includes(selectedGenre))
           : items
-
         if (yearFrom) filtered = filtered.filter((m: any) => {
           const d = m.release_date || m.first_air_date || ''
           return d.startsWith(String(yearFrom))
@@ -55,11 +60,11 @@ export default function Discover() {
           const d = m.release_date || m.first_air_date || ''
           return d.startsWith(String(yearTo)) || d <= `${yearTo}-12-31`
         })
-
         setResults(filtered)
       })
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false))
+      .catch(() => { if (!cancelled) setResults([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [type, selectedGenre, page, sort, yearFrom, yearTo])
 
   const surpriseMe = useCallback(() => {
@@ -70,10 +75,9 @@ export default function Discover() {
         if (items.length > 0) {
           const pick = items[Math.floor(Math.random() * items.length)]
           setResults([pick])
-          toast.success(`Surprise! ${pick.title || pick.name}`)
         }
       })
-      .catch(() => toast.error('Failed to find something'))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [type])
 
@@ -114,11 +118,11 @@ export default function Discover() {
           <p className="text-xs text-muted-foreground mb-1">Sort by</p>
           <select
             value={sort}
-            onChange={e => setSort(e.target.value as SortOption)}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            onChange={e => updateSort(e.target.value as SortOption)}
+            className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
             {sortOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value} className="bg-background text-foreground">{o.label}</option>
             ))}
           </select>
         </div>
@@ -128,12 +132,12 @@ export default function Discover() {
           <p className="text-xs text-muted-foreground mb-1">Year from</p>
           <select
             value={yearFrom}
-            onChange={e => setYearFrom(e.target.value ? Number(e.target.value) : '')}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            onChange={e => updateYearFrom(e.target.value ? Number(e.target.value) : '')}
+            className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
-            <option value="">Any</option>
+            <option value="" className="bg-background text-foreground">Any</option>
             {yearOptions.map(y => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y} className="bg-background text-foreground">{y}</option>
             ))}
           </select>
         </div>
@@ -142,12 +146,12 @@ export default function Discover() {
           <p className="text-xs text-muted-foreground mb-1">Year to</p>
           <select
             value={yearTo}
-            onChange={e => setYearTo(e.target.value ? Number(e.target.value) : '')}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            onChange={e => updateYearTo(e.target.value ? Number(e.target.value) : '')}
+            className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
-            <option value="">Any</option>
+            <option value="" className="bg-background text-foreground">Any</option>
             {yearOptions.map(y => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y} className="bg-background text-foreground">{y}</option>
             ))}
           </select>
         </div>
@@ -156,7 +160,7 @@ export default function Discover() {
       {/* Genre filter */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
-          onClick={() => setSelectedGenre(null)}
+          onClick={() => updateGenre(null)}
           className={cn(
             'rounded-full px-3 py-1 text-xs font-medium transition-colors',
             !selectedGenre ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
@@ -167,7 +171,7 @@ export default function Discover() {
         {genres.map(g => (
           <button
             key={g.id}
-            onClick={() => setSelectedGenre(g.id)}
+            onClick={() => updateGenre(g.id)}
             className={cn(
               'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               selectedGenre === g.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
