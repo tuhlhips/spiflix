@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { X, Play, Star, Clock, LayoutGrid, List } from 'lucide-react'
+import { X, Play, Star, Clock, LayoutGrid, List, ExternalLink } from 'lucide-react'
 import { TrailerDialog } from './TrailerDialog'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { api } from '@/lib/api'
@@ -222,6 +222,18 @@ export function MediaDrawer() {
                   >
                     {t('drawer.trailer')}
                   </button>
+                )}
+                {/* letterboxd.com/tmdb/<id> redirects to the film's page; Letterboxd is films-only, so hide for TV */}
+                {data.type === 'movie' && (
+                  <a
+                    href={`https://letterboxd.com/tmdb/${data.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all hover:bg-white/20 hover:text-white hover:scale-105"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Letterboxd
+                  </a>
                 )}
               </div>
 

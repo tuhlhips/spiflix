@@ -147,6 +147,12 @@ export default function Surprise() {
               <a href={`https://www.themoviedb.org/${recommendation.type}/${recommendation.item.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
                 <ExternalLink className="h-4 w-4" /> TMDB
               </a>
+              {/* letterboxd.com/tmdb/<id> redirects to the film's page; Letterboxd is films-only, so hide for TV */}
+              {recommendation.type === 'movie' && (
+                <a href={`https://letterboxd.com/tmdb/${recommendation.item.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
+                  <ExternalLink className="h-4 w-4" /> Letterboxd
+                </a>
+              )}
               <button onClick={() => void copyId()} className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? 'Copied' : 'Copy ID'}
               </button>
