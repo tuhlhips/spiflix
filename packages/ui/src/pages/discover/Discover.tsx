@@ -35,6 +35,10 @@ const yearOptions = Array.from({ length: 50 }, (_, i) => currentYear - i)
 // (the API response is a bare array with no total_pages to rely on).
 const PAGE_SIZE = 20
 
+// TMDB's discover endpoint caps at page 500; the backend rejects anything
+// higher, so the jump-to-page input clamps to this.
+const MAX_PAGE = 500
+
 export default function Discover() {
   const navigate = useNavigate()
   const [type, setType] = useState<'movie' | 'tv'>('movie')
@@ -49,6 +53,7 @@ export default function Discover() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [yearFrom, setYearFrom] = useState<number | ''>('')
   const [yearTo, setYearTo] = useState<number | ''>('')
+  const [pageInput, setPageInput] = useState('')
 
   useEffect(() => {
     api.tmdb.genres(type).then(setGenres).catch(() => {})
@@ -72,6 +77,13 @@ export default function Discover() {
   const changeSortField = (value: SortField) => { setSortField(value); setPage(1) }
   const toggleSortDir = () => { setSortDir(d => d === 'desc' ? 'asc' : 'desc'); setPage(1) }
   const changeGenre = (id: number | null) => { setSelectedGenre(id); setPage(1) }
+
+  const goToPage = () => {
+    const target = Number(pageInput)
+    if (!Number.isInteger(target) || target < 1) return
+    setPage(Math.min(target, MAX_PAGE))
+    setPageInput('')
+  }
   const changeYearFrom = (value: number | '') => { setYearFrom(value); setPage(1) }
   const changeYearTo = (value: number | '') => { setYearTo(value); setPage(1) }
 
@@ -222,24 +234,52 @@ export default function Discover() {
 
       {/* Pagination — only meaningful once there are results to page through. */}
       {!error && (results.length > 0 || page > 1) && (
-        <div className="flex justify-center gap-2 mt-8">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={loading || page === 1}
-            className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={loading || page === 1}
+              className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
+            <span className="flex items-center px-4 text-sm text-muted-foreground">Page {page}</span>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={loading || results.length < PAGE_SIZE}
+              className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Jump to page */}
+          <form
+            onSubmit={e => { e.preventDefault(); goToPage() }}
+            className="flex items-center gap-2 text-sm text-muted-foreground"
           >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </button>
-          <span className="flex items-center px-4 text-sm text-muted-foreground">Page {page}</span>
-          <button
-            onClick={() => setPage(p => p + 1)}
-            disabled={loading || results.length < PAGE_SIZE}
-            className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </button>
+            <label htmlFor="discover-goto" className="text-xs">Go to page</label>
+            <input
+              id="discover-goto"
+              type="number"
+              min={1}
+              max={MAX_PAGE}
+              inputMode="numeric"
+              value={pageInput}
+              onChange={e => setPageInput(e.target.value)}
+              placeholder={String(page)}
+              className="w-20 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="submit"
+              disabled={loading || pageInput === ''}
+              className="rounded-lg bg-muted px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
+            >
+              Go
+            </button>
+          </form>
         </div>
       )}
     </div>
