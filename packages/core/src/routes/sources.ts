@@ -1,6 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 import { sourceCache } from '../services/cache.js'
 
+function cacheResult(key: string, result: { expiresAt: string }): void {
+  // Refresh before a provider token expires; never keep playback URLs longer
+  // than five minutes when the provider does not supply an expiry.
+  const ttl = Math.max(1, Math.min(300, Math.floor((Date.parse(result.expiresAt) - Date.now() - 30_000) / 1000)))
+  sourceCache.set(key, result, ttl)
+}
+
 /**
  * Source routes — resolve streaming URLs for movies/TV.
  *
@@ -12,7 +19,7 @@ export async function sourceRoutes(app: FastifyInstance) {
   app.get('/v1/movies/:tmdbId', async (request, reply) => {
     const { tmdbId } = request.params as { tmdbId: string }
     const id = Number(tmdbId)
-    if (isNaN(id)) {
+    if (!Number.isSafeInteger(id) || id <= 0) {
       return reply.code(400).send({ error: 'Invalid TMDB ID' })
     }
 
@@ -35,7 +42,7 @@ export async function sourceRoutes(app: FastifyInstance) {
         console.log('[Sources] Diagnostics:', JSON.stringify(result.diagnostics, null, 2))
       }
 
-      sourceCache.set(cacheKey, result)
+      cacheResult(cacheKey, result)
       reply.header('X-Cache', 'MISS')
       return result
     } catch (err: any) {
@@ -54,7 +61,7 @@ export async function sourceRoutes(app: FastifyInstance) {
     const id = Number(tmdbId)
     const s = Number(season)
     const e = Number(episode)
-    if (isNaN(id) || isNaN(s) || isNaN(e)) {
+    if (![id, s, e].every(value => Number.isSafeInteger(value) && value > 0)) {
       return reply.code(400).send({ error: 'Invalid parameters' })
     }
 
@@ -71,7 +78,7 @@ export async function sourceRoutes(app: FastifyInstance) {
         process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
       )
 
-      sourceCache.set(cacheKey, result)
+      cacheResult(cacheKey, result)
       reply.header('X-Cache', 'MISS')
       return result
     } catch (err: any) {

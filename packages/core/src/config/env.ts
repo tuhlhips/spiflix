@@ -14,6 +14,14 @@ function optionalEnv(key: string, fallback: string): string {
   return process.env[key] || fallback
 }
 
+function requiredInProduction(key: string): string[] {
+  const values = optionalEnv(key, '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)
+  if (optionalEnv('NODE_ENV', 'development') === 'production' && values.length === 0) {
+    throw new Error(`Missing required production env: ${key}`)
+  }
+  return values
+}
+
 export const env = {
   port: Number(optionalEnv('PORT', '3000')),
   host: optionalEnv('HOST', 'localhost'),
@@ -27,6 +35,22 @@ export const env = {
     baseUrl: 'https://api.themoviedb.org/3',
     imageBaseUrl: 'https://image.tmdb.org/t/p',
   },
+
+  proxy: {
+    // Keep proxy capabilities separate from the TMDB credential. Rotating one
+    // secret must not affect the other service.
+    signingSecret: requireEnv('PROXY_SIGNING_SECRET'),
+    // Previous signing secrets, still accepted for *verification* only (never
+    // for signing new URLs). Set this to the old secret during a rotation so
+    // in-flight signed URLs — valid up to tokenTtlSeconds — keep working, then
+    // clear it once that window has elapsed. Comma-separated to allow more than
+    // one overlapping rotation. Normally empty.
+    previousSigningSecrets: optionalEnv('PROXY_SIGNING_SECRET_PREVIOUS', '').split(',').map(value => value.trim()).filter(Boolean),
+    allowedHosts: requiredInProduction('PROXY_ALLOWED_HOSTS'),
+    tokenTtlSeconds: Number(optionalEnv('PROXY_TOKEN_TTL_SECONDS', '14400')),
+  },
+
+  trustProxy: optionalEnv('TRUST_PROXY', '').split(',').map(value => value.trim()).filter(Boolean),
 
   cache: {
     type: optionalEnv('CACHE_TYPE', 'memory') as 'memory' | 'redis',

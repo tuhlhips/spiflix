@@ -40,4 +40,14 @@ export default defineConfig({
       '/v1': 'http://localhost:3000',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          hls: ['hls.js'],
+        },
+      },
+    },
+  },
 })

@@ -4,7 +4,7 @@
   "compatibility_date": "2026-07-08",
   "compatibility_flags": ["nodejs_compat"],
   "build": {
-    "command": "cd ../.. && pnpm --filter @spiflix/shared build && cd packages/core && npx wrangler deploy --dry-run --outdir=dist"
+    "command": "cd ../.. && pnpm --filter @spiflix/shared build && pnpm --filter @spiflix/core build"
   },
   "workers_dev": true,
   "observability": {

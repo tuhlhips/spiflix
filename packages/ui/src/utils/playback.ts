@@ -3,6 +3,7 @@ export interface Source {
   type: string
   url: string
   provider: { id: string; name: string }
+  audioTracks?: Array<{ language: string; label: string }>
 }
 
 export function getPreferredSource(sources: Source[]): Source | undefined {

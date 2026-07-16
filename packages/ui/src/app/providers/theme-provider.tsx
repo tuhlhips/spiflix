@@ -12,22 +12,30 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+function readStoredTheme<T extends string>(key: string, fallback: T): T {
+  try { return (localStorage.getItem(key) as T) || fallback } catch { return fallback }
+}
+
+function storeTheme(key: string, value: string): void {
+  try { localStorage.setItem(key, value) } catch {}
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    return (localStorage.getItem('spiflix-theme') as Theme) || 'dark'
+    return readStoredTheme<Theme>('spiflix-theme', 'dark')
   })
   const [colorTheme, setColorThemeState] = useState<ColorTheme>(() => {
-    return (localStorage.getItem('spiflix-color-theme') as ColorTheme) || 'default'
+    return readStoredTheme<ColorTheme>('spiflix-color-theme', 'default')
   })
 
   const setTheme = (t: Theme) => {
     setThemeState(t)
-    localStorage.setItem('spiflix-theme', t)
+    storeTheme('spiflix-theme', t)
   }
 
   const setColorTheme = (t: ColorTheme) => {
     setColorThemeState(t)
-    localStorage.setItem('spiflix-color-theme', t)
+    storeTheme('spiflix-color-theme', t)
   }
 
   useEffect(() => {

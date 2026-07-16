@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { X, Play, Star, Clock, LayoutGrid, List } from 'lucide-react'
 import { TrailerDialog } from './TrailerDialog'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { api } from '@/lib/api'
 import { getImageUrl } from '@/lib/utils'
 import { useDrawer } from '@/app/providers/drawer-provider'
@@ -54,16 +55,43 @@ export function MediaDrawer() {
   const navigate = useNavigate()
   const [data, setData] = useState<MediaData | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
   const [selectedSeason, setSelectedSeason] = useState(1)
   const [episodes, setEpisodes] = useState<Episode[]>([])
   const [episodesLoading, setEpisodesLoading] = useState(false)
   const [episodeView, setEpisodeView] = useState<'grid' | 'list'>('grid')
   const [trailerOpen, setTrailerOpen] = useState(false)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!payload) return
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    closeRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !trailerOpen) close()
+      if (event.key !== 'Tab' || !drawerRef.current) return
+      const focusable = drawerRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], select, input, [tabindex]:not([tabindex="-1"])')
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      returnFocusRef.current?.focus()
+    }
+  }, [payload, trailerOpen, close])
 
   useEffect(() => {
     if (!payload) { setData(null); return }
     let cancelled = false
     setLoading(true)
+    setLoadError(false)
     api.tmdb.details(payload.type, payload.id)
       .then((d: any) => {
         if (cancelled) return
@@ -78,18 +106,20 @@ export function MediaDrawer() {
           if (first) setSelectedSeason(first.season_number)
         }
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) { setData(null); setLoadError(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [payload])
+  }, [payload, retryToken])
 
   useEffect(() => {
     if (!payload || payload.type !== 'tv') return
+    let cancelled = false
     setEpisodesLoading(true)
     api.tmdb.season(payload.id, selectedSeason)
-      .then((d: any) => setEpisodes(d.episodes || []))
-      .catch(() => setEpisodes([]))
-      .finally(() => setEpisodesLoading(false))
+      .then((d: any) => { if (!cancelled) setEpisodes(d.episodes || []) })
+      .catch(() => { if (!cancelled) setEpisodes([]) })
+      .finally(() => { if (!cancelled) setEpisodesLoading(false) })
+    return () => { cancelled = true }
   }, [payload, selectedSeason])
 
   if (!payload) return null
@@ -118,12 +148,28 @@ export function MediaDrawer() {
     <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={close}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
+        ref={drawerRef}
         className="relative z-10 w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-t-2xl bg-background shadow-2xl"
+        data-lenis-prevent
+        role="dialog"
+        aria-modal="true"
+        aria-label={data?.title || 'Media details'}
         onClick={e => e.stopPropagation()}
       >
+        {/* Always rendered (not just once data loads) so it exists as soon as the
+            dialog opens — the focus-trap effect above focuses this on mount, and
+            it also gives the loading/error states a visible way to close. */}
+        <button ref={closeRef} onClick={close} aria-label="Close media details" className="absolute top-4 right-4 z-20 rounded-full bg-black/50 p-2 text-white backdrop-blur-sm hover:bg-black/70">
+          <X className="h-5 w-5" />
+        </button>
+
         {loading ? (
           <div className="flex h-64 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : loadError ? (
+          <div className="h-64">
+            <ErrorState message="Couldn't load details for this title." onRetry={() => setRetryToken(n => n + 1)} />
           </div>
         ) : data ? (
           <>
@@ -134,10 +180,6 @@ export function MediaDrawer() {
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent" />
-
-              <button onClick={close} className="absolute top-4 right-4 z-10 rounded-full bg-black/50 p-2 text-white backdrop-blur-sm hover:bg-black/70">
-                <X className="h-5 w-5" />
-              </button>
 
               <div className="absolute bottom-0 left-0 right-0 p-6">
                 <h2 className="text-2xl sm:text-4xl font-bold mb-2">{data.title}</h2>
@@ -277,7 +319,10 @@ export function MediaDrawer() {
                     {data.recommendations.results.slice(0, 10).map((rec: any) => (
                       <button
                         key={rec.id}
-                        onClick={() => payload && navigate(`/watch/${rec.media_type || data.type}/${rec.id}`)}
+                        onClick={() => {
+                          close()
+                          navigate(`/watch/${rec.media_type || data.type}/${rec.id}`)
+                        }}
                         className="flex-shrink-0 w-[120px] text-left group"
                       >
                         <div className="aspect-[2/3] overflow-hidden rounded-lg bg-muted">

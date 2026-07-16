@@ -14,22 +14,24 @@ interface DrawerContextType {
 
 const DrawerContext = createContext<DrawerContextType | null>(null)
 
+function parsePayload(media: string | null): DrawerPayload | null {
+  if (!media) return null
+  const [type, id] = media.split(':')
+  const numericId = Number(id)
+  return (type === 'movie' || type === 'tv') && /^\d+$/.test(id || '') && Number.isSafeInteger(numericId) && numericId > 0
+    ? { type, id: numericId }
+    : null
+}
+
 export function DrawerProvider({ children }: { children: ReactNode }) {
   const [searchParams] = useSearchParams()
   const [payload, setPayload] = useState<DrawerPayload | null>(() => {
-    const media = searchParams.get('media')
-    if (!media) return null
-    const [type, id] = media.split(':')
-    if (type && id) return { type: type as 'movie' | 'tv', id: Number(id) }
-    return null
+    return parsePayload(searchParams.get('media'))
   })
 
   // Sync URL to state on mount (for deep linking)
   useEffect(() => {
-    const media = searchParams.get('media')
-    if (!media) { setPayload(null); return }
-    const [type, id] = media.split(':')
-    if (type && id) setPayload({ type: type as 'movie' | 'tv', id: Number(id) })
+    setPayload(parsePayload(searchParams.get('media')))
   }, [searchParams])
 
   const open = useCallback((p: DrawerPayload) => {

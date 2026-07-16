@@ -10,6 +10,6 @@
     "format": "prettier --write \"packages/**/*.{ts,tsx,json,css}\""
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.11"
   }
 }

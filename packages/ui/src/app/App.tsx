@@ -9,6 +9,7 @@ const Home = lazy(() => import('../pages/home/Home'))
 const Movies = lazy(() => import('../pages/movies/Movies'))
 const Shows = lazy(() => import('../pages/shows/Shows'))
 const Discover = lazy(() => import('../pages/discover/Discover'))
+const Surprise = lazy(() => import('../pages/surprise/Surprise'))
 const Settings = lazy(() => import('../pages/settings/Settings'))
 const Disclaimer = lazy(() => import('../pages/disclaimer/Disclaimer'))
 const WatchMovie = lazy(() => import('../pages/watch/movie/WatchMovie'))
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/movies" element={<Movies />} />
             <Route path="/shows" element={<Shows />} />
             <Route path="/discover" element={<Discover />} />
+            <Route path="/surprise" element={<Surprise />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
           </Route>

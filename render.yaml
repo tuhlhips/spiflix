@@ -14,3 +14,12 @@ services:
         value: 3000
       - key: PUBLIC_URL
         sync: false
+      - key: PROXY_SIGNING_SECRET
+        sync: false
+      # Optional. During a secret rotation, set this to the OLD secret so
+      # already-issued proxy URLs keep verifying until they expire, then clear
+      # it. Leave empty in normal operation.
+      - key: PROXY_SIGNING_SECRET_PREVIOUS
+        sync: false
+      - key: PROXY_ALLOWED_HOSTS
+        sync: false

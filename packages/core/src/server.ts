@@ -28,4 +28,10 @@ async function main() {
   process.on('SIGTERM', () => shutdown('SIGTERM'))
 }
 
-main()
+main().catch((err) => {
+  // createApp() runs before the try/catch inside main() (e.g. a missing
+  // required env var throws there). Without this handler that surfaces as a
+  // raw unhandled promise rejection instead of a clean, logged exit.
+  console.error('[Spiflix] Fatal startup error:', err)
+  process.exit(1)
+})

@@ -2,6 +2,10 @@ import type { FastifyInstance } from 'fastify'
 
 const INTRODB_BASE = 'https://api.introdb.app'
 
+function validPositiveInteger(value: string | undefined, max: number): boolean {
+  return value === undefined || (/^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0 && Number(value) <= max)
+}
+
 export async function introdbRoutes(app: FastifyInstance) {
   app.get('/api/introdb/segments', async (request, reply) => {
     const { imdb_id, season, episode } = request.query as {
@@ -10,8 +14,8 @@ export async function introdbRoutes(app: FastifyInstance) {
       episode?: string
     }
 
-    if (!imdb_id) {
-      return reply.code(400).send({ error: 'Missing imdb_id' })
+    if (!imdb_id || !/^tt\d{7,10}$/.test(imdb_id) || !validPositiveInteger(season, 999) || !validPositiveInteger(episode, 10_000)) {
+      return reply.code(400).send({ error: 'Invalid IntroDB parameters' })
     }
 
     const params = new URLSearchParams({ imdb_id })

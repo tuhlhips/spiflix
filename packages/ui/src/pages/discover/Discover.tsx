@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { MediaCard } from '@/components/media/MediaCard'
+import { LoadingState } from '@/components/ui/LoadingState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Film, Tv, Shuffle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 
 type SortOption = 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' | 'primary_release_date.asc' | 'original_title.asc'
 
@@ -18,13 +20,21 @@ const sortOptions: { value: SortOption; label: string }[] = [
 const currentYear = new Date().getFullYear()
 const yearOptions = Array.from({ length: 50 }, (_, i) => currentYear - i)
 
+// TMDB's discover endpoint returns 20 results per page. A short page means
+// there are no further pages, which is how we bound the "Next" button below
+// (the API response is a bare array with no total_pages to rely on).
+const PAGE_SIZE = 20
+
 export default function Discover() {
+  const navigate = useNavigate()
   const [type, setType] = useState<'movie' | 'tv'>('movie')
   const [genres, setGenres] = useState<{ id: number; name: string }[]>([])
   const [selectedGenre, setSelectedGenre] = useState<number | null>(null)
   const [results, setResults] = useState<any[]>([])
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [sort, setSort] = useState<SortOption>('popularity.desc')
   const [yearFrom, setYearFrom] = useState<number | ''>('')
   const [yearTo, setYearTo] = useState<number | ''>('')
@@ -36,53 +46,29 @@ export default function Discover() {
   }, [type])
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    const fetcher = selectedGenre
-      ? () => api.tmdb.popular(type, page)
-      : () => api.tmdb.popular(type, page)
+    setError(false)
+    api.tmdb.discover(type, { page, sortBy: sort, genreId: selectedGenre, yearFrom, yearTo })
+      .then(results => { if (!cancelled) setResults(results) })
+      .catch(() => { if (!cancelled) { setResults([]); setError(true) } })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [type, selectedGenre, page, sort, yearFrom, yearTo, reloadKey])
 
-    fetcher()
-      .then(items => {
-        let filtered = selectedGenre
-          ? items.filter((m: any) => m.genre_ids?.includes(selectedGenre))
-          : items
-
-        if (yearFrom) filtered = filtered.filter((m: any) => {
-          const d = m.release_date || m.first_air_date || ''
-          return d.startsWith(String(yearFrom))
-        })
-        if (yearTo) filtered = filtered.filter((m: any) => {
-          const d = m.release_date || m.first_air_date || ''
-          return d.startsWith(String(yearTo)) || d <= `${yearTo}-12-31`
-        })
-
-        setResults(filtered)
-      })
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false))
-  }, [type, selectedGenre, page, sort, yearFrom, yearTo])
-
-  const surpriseMe = useCallback(() => {
-    setLoading(true)
-    const randomPage = Math.floor(Math.random() * 20) + 1
-    api.tmdb.popular(type, randomPage)
-      .then(items => {
-        if (items.length > 0) {
-          const pick = items[Math.floor(Math.random() * items.length)]
-          setResults([pick])
-          toast.success(`Surprise! ${pick.title || pick.name}`)
-        }
-      })
-      .catch(() => toast.error('Failed to find something'))
-      .finally(() => setLoading(false))
-  }, [type])
+  // Any filter change resets to page 1, so narrowing a filter while deep in the
+  // pages can't leave us pointing past the end of a smaller result set.
+  const changeSort = (value: SortOption) => { setSort(value); setPage(1) }
+  const changeGenre = (id: number | null) => { setSelectedGenre(id); setPage(1) }
+  const changeYearFrom = (value: number | '') => { setYearFrom(value); setPage(1) }
+  const changeYearTo = (value: number | '') => { setYearTo(value); setPage(1) }
 
   return (
     <div className="py-6 px-4 sm:px-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Discover</h1>
         <button
-          onClick={surpriseMe}
+          onClick={() => navigate('/surprise')}
           className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
         >
           <Shuffle className="h-4 w-4" />
@@ -114,11 +100,11 @@ export default function Discover() {
           <p className="text-xs text-muted-foreground mb-1">Sort by</p>
           <select
             value={sort}
-            onChange={e => setSort(e.target.value as SortOption)}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            onChange={e => changeSort(e.target.value as SortOption)}
+            className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
             {sortOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value} className="bg-background text-foreground">{o.label}</option>
             ))}
           </select>
         </div>
@@ -128,12 +114,13 @@ export default function Discover() {
           <p className="text-xs text-muted-foreground mb-1">Year from</p>
           <select
             value={yearFrom}
-            onChange={e => setYearFrom(e.target.value ? Number(e.target.value) : '')}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            onChange={e => changeYearFrom(e.target.value ? Number(e.target.value) : '')}
+            className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
-            <option value="">Any</option>
+            <option value="" className="bg-background text-foreground">Any</option>
             {yearOptions.map(y => (
-              <option key={y} value={y}>{y}</option>
+              // Disallow a start year later than the chosen end year.
+              <option key={y} value={y} disabled={yearTo !== '' && y > yearTo} className="bg-background text-foreground">{y}</option>
             ))}
           </select>
         </div>
@@ -142,12 +129,13 @@ export default function Discover() {
           <p className="text-xs text-muted-foreground mb-1">Year to</p>
           <select
             value={yearTo}
-            onChange={e => setYearTo(e.target.value ? Number(e.target.value) : '')}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            onChange={e => changeYearTo(e.target.value ? Number(e.target.value) : '')}
+            className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
-            <option value="">Any</option>
+            <option value="" className="bg-background text-foreground">Any</option>
             {yearOptions.map(y => (
-              <option key={y} value={y}>{y}</option>
+              // Disallow an end year earlier than the chosen start year.
+              <option key={y} value={y} disabled={yearFrom !== '' && y < yearFrom} className="bg-background text-foreground">{y}</option>
             ))}
           </select>
         </div>
@@ -156,10 +144,10 @@ export default function Discover() {
       {/* Genre filter */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
-          onClick={() => setSelectedGenre(null)}
+          onClick={() => changeGenre(null)}
           className={cn(
             'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-            !selectedGenre ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
+            selectedGenre === null ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
           )}
         >
           All
@@ -167,7 +155,7 @@ export default function Discover() {
         {genres.map(g => (
           <button
             key={g.id}
-            onClick={() => setSelectedGenre(g.id)}
+            onClick={() => changeGenre(g.id)}
             className={cn(
               'rounded-full px-3 py-1 text-xs font-medium transition-colors',
               selectedGenre === g.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
@@ -180,9 +168,12 @@ export default function Discover() {
 
       {/* Results grid */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message="Couldn't load results. This may be a temporary problem with the server or TMDB — please try again."
+          onRetry={() => setReloadKey(k => k + 1)}
+        />
       ) : results.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <p className="text-muted-foreground mb-2">No results found</p>
@@ -204,25 +195,28 @@ export default function Discover() {
         </div>
       )}
 
-      {/* Pagination */}
-      <div className="flex justify-center gap-2 mt-8">
-        <button
-          onClick={() => setPage(p => Math.max(1, p - 1))}
-          disabled={page === 1}
-          className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 hover:bg-muted/80"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Previous
-        </button>
-        <span className="flex items-center px-4 text-sm text-muted-foreground">Page {page}</span>
-        <button
-          onClick={() => setPage(p => p + 1)}
-          className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80"
-        >
-          Next
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+      {/* Pagination — only meaningful once there are results to page through. */}
+      {!error && (results.length > 0 || page > 1) && (
+        <div className="flex justify-center gap-2 mt-8">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={loading || page === 1}
+            className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </button>
+          <span className="flex items-center px-4 text-sm text-muted-foreground">Page {page}</span>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={loading || results.length < PAGE_SIZE}
+            className="flex items-center gap-1 rounded-lg bg-muted px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/80"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

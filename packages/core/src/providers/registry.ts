@@ -82,12 +82,17 @@ export class ProviderRegistry {
     const sources: Source[] = []
     const subtitles: Subtitle[] = []
     const diagnostics: Diagnostic[] = []
+    const expiries: number[] = []
 
     for (const r of results) {
       if (r.status === 'fulfilled') {
         sources.push(...r.value.result.sources)
         subtitles.push(...r.value.result.subtitles)
         diagnostics.push(...r.value.result.diagnostics)
+        if (r.value.result.expiresAt) {
+          const expiry = Date.parse(r.value.result.expiresAt)
+          if (!Number.isNaN(expiry)) expiries.push(expiry)
+        }
       } else {
         diagnostics.push({
           code: 'PROVIDER_ERROR' as const,
@@ -110,9 +115,12 @@ export class ProviderRegistry {
       })
     }
 
+    const expiresAt = expiries.length > 0
+      ? Math.min(...expiries)
+      : Date.now() + 5 * 60_000
     return {
       responseId: crypto.randomUUID(),
-      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      expiresAt: new Date(expiresAt).toISOString(),
       sources,
       subtitles,
       diagnostics,

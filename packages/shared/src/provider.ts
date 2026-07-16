@@ -16,6 +16,8 @@ export interface ProviderResult {
   sources: Source[]
   subtitles: Subtitle[]
   diagnostics: Diagnostic[]
+  /** Earliest upstream token expiry, when the provider exposes one. */
+  expiresAt?: string
 }
 
 /** Provider capabilities */

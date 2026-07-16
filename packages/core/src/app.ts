@@ -1,5 +1,7 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import helmet from '@fastify/helmet'
+import compress from '@fastify/compress'
 import rateLimit from '@fastify/rate-limit'
 import { env } from './config/env.js'
 import { loggerConfig } from './config/logger.js'
@@ -20,15 +22,32 @@ import { introdbRoutes } from './routes/introdb.js'
 export async function createApp() {
   const app = Fastify({
     logger: loggerConfig,
-    trustProxy: true,
+    // Only trust explicitly configured reverse-proxy addresses. Trusting every
+    // forwarded header lets direct clients bypass IP-based rate limiting.
+    trustProxy: env.trustProxy.length > 0 ? env.trustProxy : false,
   })
 
   // --- Plugins ---
 
+  // Security headers. crossOriginResourcePolicy is forced to 'cross-origin':
+  // this API is meant to be fetched from the UI on a different origin (see
+  // CORS_ORIGIN / @fastify/cors below), and helmet's default of 'same-origin'
+  // would make browsers block every TMDB fetch and video stream. CSP/COOP/COEP
+  // defaults are fine — this server never serves HTML documents for them to
+  // constrain.
+  await app.register(helmet, {
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+
+  // Response compression for the JSON API routes. The /v1/proxy route opts out
+  // via `{ compress: false }` (see routes/proxy.ts) so byte-range streaming is
+  // never corrupted.
+  await app.register(compress)
+
   await app.register(cors, {
-    origin: env.cors.origin === '*' ? true : env.cors.origin.split(','),
+    origin: env.cors.origin === '*' ? true : env.cors.origin.split(',').map(o => o.trim()).filter(Boolean),
     methods: ['GET', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
     exposedHeaders: ['Content-Range', 'Accept-Ranges', 'ETag', 'X-Cache'],
     maxAge: 86400,
   })

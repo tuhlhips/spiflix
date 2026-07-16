@@ -5,6 +5,7 @@ import type {
   ProviderMediaObject,
   ProviderResult,
 } from '@spiflix/shared'
+import { createProxyUrl } from '../services/proxy.js'
 
 /**
  * Base provider class. All scrapers extend this.
@@ -37,10 +38,9 @@ export abstract class BaseProvider implements IProvider {
   }
 
   /** Build proxy URL that routes through our own server */
-  protected createProxyUrl(url: string, headers: Record<string, string> = {}): string {
-    const data = encodeURIComponent(JSON.stringify({ url, headers }))
+  protected createProxyUrl(url: string, headers: Record<string, string> = {}, expiresAt?: number): string {
     const base = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`
-    return `${base}/v1/proxy?data=${data}`
+    return createProxyUrl(url, headers, base, expiresAt)
   }
 
   /** Convenience: build an empty result with diagnostics */

@@ -5,7 +5,9 @@ export function StartupOverlay() {
   const [phase, setPhase] = useState<'loading' | 'brand' | 'done'>('loading')
 
   useEffect(() => {
-    if (sessionStorage.getItem('spiflix-startup-seen')) {
+    let seen = false
+    try { seen = sessionStorage.getItem('spiflix-startup-seen') === 'true' } catch {}
+    if (seen) {
       setPhase('done')
       return
     }
@@ -13,7 +15,7 @@ export function StartupOverlay() {
     const t1 = setTimeout(() => setPhase('brand'), 1500)
     const t2 = setTimeout(() => {
       setPhase('done')
-      sessionStorage.setItem('spiflix-startup-seen', 'true')
+      try { sessionStorage.setItem('spiflix-startup-seen', 'true') } catch {}
     }, 2800)
 
     return () => { clearTimeout(t1); clearTimeout(t2) }

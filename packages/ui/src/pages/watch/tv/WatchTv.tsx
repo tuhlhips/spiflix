@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { MediaPlayer } from '@/components/player/MediaPlayer'
 import { EpisodeSidebar } from '@/components/player/EpisodeSidebar'
@@ -14,21 +14,30 @@ interface Season {
 export default function WatchTv() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
-  const season = Number(searchParams.get('s')) || 1
-  const episode = Number(searchParams.get('e')) || 1
+  const parsePositive = (value: string | null, fallback: number, max: number) => {
+    if (value === null) return fallback
+    return /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0 && Number(value) <= max ? Number(value) : null
+  }
+  const tmdbId = Number(id)
+  const season = parsePositive(searchParams.get('s'), 1, 999)
+  const episode = parsePositive(searchParams.get('e'), 1, 10_000)
+  const validRoute = Boolean(id && /^\d+$/.test(id) && Number.isSafeInteger(tmdbId) && tmdbId > 0 && season !== null && episode !== null)
   const [showEpisodes, setShowEpisodes] = useState(false)
   const [seasons, setSeasons] = useState<Season[]>([])
 
   useEffect(() => {
-    api.tmdb.details('tv', Number(id))
+    if (!validRoute) return
+    api.tmdb.details('tv', tmdbId)
       .then(data => setSeasons(data.seasons || []))
       .catch(() => {})
-  }, [id])
+  }, [tmdbId, validRoute])
+
+  if (!validRoute || season === null || episode === null) return <Navigate to="/not-found" replace />
 
   return (
     <div className="relative h-screen w-full bg-black">
       <MediaPlayer
-        tmdbId={Number(id)}
+        tmdbId={tmdbId}
         type="tv"
         season={season}
         episode={episode}
@@ -37,7 +46,7 @@ export default function WatchTv() {
 
       {showEpisodes && (
         <EpisodeSidebar
-          tmdbId={Number(id)}
+          tmdbId={tmdbId}
           currentSeason={season}
           currentEpisode={episode}
           seasons={seasons}

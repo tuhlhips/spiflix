@@ -45,6 +45,20 @@ export const api = {
     genres: (type: 'movie' | 'tv') =>
       request<{ id: number; name: string }[]>(`/api/tmdb/genres/${type}`),
 
+    discover: (type: 'movie' | 'tv', options: {
+      page: number
+      sortBy: string
+      genreId: number | null
+      yearFrom: number | ''
+      yearTo: number | ''
+    }) => {
+      const params = new URLSearchParams({ page: String(options.page), sort_by: options.sortBy })
+      if (options.genreId) params.set('with_genres', String(options.genreId))
+      if (options.yearFrom) params.set('year_from', String(options.yearFrom))
+      if (options.yearTo) params.set('year_to', String(options.yearTo))
+      return request<any[]>(`/api/tmdb/discover/${type}?${params}`)
+    },
+
     search: (query: string, page = 1) =>
       request<{ movies: any[]; tv: any[] }>(`/api/tmdb/search?q=${encodeURIComponent(query)}&page=${page}`),
 

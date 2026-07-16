@@ -97,7 +97,7 @@ export function MediaRail({ title, fetcher, isLoading: externalLoading, mapper =
             {items.map((item) => {
               const mapped = mapper(item)
               return (
-                <div key={mapped.id} className="flex-shrink-0 min-w-0" style={{ flex: '0 0 auto', width: '150px' }}>
+                <div key={`${mapped.type}-${mapped.id}`} className="flex-shrink-0 min-w-0" style={{ flex: '0 0 auto', width: '150px' }}>
                   <div className="sm:w-[180px]">
                     <MediaCard
                       id={mapped.id}

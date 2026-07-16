@@ -67,6 +67,23 @@ interface TmdbMediaDetail {
   }[]
 }
 
+/**
+ * The UI sends movie-oriented sort keys unconditionally, but TMDB's
+ * /discover/tv only accepts first_air_date.*, name.*, original_name.*,
+ * popularity.*, vote_average.*, and vote_count.* — it rejects
+ * primary_release_date.* and original_title.asc with a 400. Translate the
+ * incoming key to its TV equivalent so Newest/Oldest/A-Z work on TV Shows.
+ */
+function sortByForType(type: 'movie' | 'tv', sortBy: string): string {
+  if (type !== 'tv') return sortBy
+  switch (sortBy) {
+    case 'primary_release_date.desc': return 'first_air_date.desc'
+    case 'primary_release_date.asc': return 'first_air_date.asc'
+    case 'original_title.asc': return 'name.asc'
+    default: return sortBy
+  }
+}
+
 class TmdbService {
   private baseUrl = env.tmdb.baseUrl
   private imageBaseUrl = env.tmdb.imageBaseUrl
@@ -154,6 +171,43 @@ class TmdbService {
       language,
     })
     return this.tagWith(data.results, 'tv')
+  }
+
+  /** Browse media using the TMDB discover endpoint and the selected filters. */
+  async discover(
+    type: 'movie' | 'tv',
+    options: {
+      page?: number
+      sortBy?: string
+      genreId?: number
+      yearFrom?: number
+      yearTo?: number
+      language?: string
+      region?: string
+    } = {},
+  ): Promise<TmdbMovie[] | TmdbTv[]> {
+    const params: Record<string, string> = {
+      page: String(options.page || 1),
+      sort_by: sortByForType(type, options.sortBy || 'popularity.desc'),
+      language: options.language || 'en-US',
+    }
+
+    if (options.genreId) params.with_genres = String(options.genreId)
+    if (options.yearFrom) {
+      params[type === 'movie' ? 'primary_release_date.gte' : 'first_air_date.gte'] = `${options.yearFrom}-01-01`
+    }
+    if (options.yearTo) {
+      params[type === 'movie' ? 'primary_release_date.lte' : 'first_air_date.lte'] = `${options.yearTo}-12-31`
+    }
+    // Only attach region when no year filter is active: TMDB switches
+    // primary_release_date.* filtering to each title's *regional* release date
+    // when a region is present, silently breaking the year range.
+    if (type === 'movie' && options.region && !options.yearFrom && !options.yearTo) params.region = options.region
+
+    const data = await this.fetch<TmdbResponse<TmdbMovie | TmdbTv>>(`/discover/${type}`, params)
+    return type === 'tv'
+      ? this.tagWith(data.results as TmdbTv[], 'tv')
+      : data.results as TmdbMovie[]
   }
 
   /** Search movies and TV shows */

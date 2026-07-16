@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { useSafeBack } from '@/hooks/useSafeBack'
 
 export default function Disclaimer() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const goBack = useSafeBack('/')
 
   return (
     <div className="mx-auto max-w-2xl py-12 px-4 sm:px-6">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
+      <button onClick={goBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" />
         {t('disclaimer.goBack')}
       </button>

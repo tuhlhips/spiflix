@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { usePersistentState } from './useLocalStorage'
 
 interface PlaybackProgress {
@@ -32,19 +33,14 @@ export function usePlaybackProgress(
 
   const [progress, setProgress] = usePersistentState<PlaybackProgress | null>(key, null)
 
-  const save = (currentTime: number, duration: number) => {
+  const save = useCallback((currentTime: number, duration: number) => {
     if (currentTime < 5 || duration - currentTime < 5) return
-    console.log('[Playback] save key:', key, 'time:', currentTime, 'duration:', duration)
     setProgress({ currentTime, duration, timestamp: Date.now() })
-  }
+  }, [setProgress])
 
-  const clear = () => setProgress(null)
+  const clear = useCallback(() => setProgress(null), [setProgress])
 
-  const getResumeTime = (): number | null => {
-    const saved = readProgress(key)
-    console.log('[Playback] getResumeTime key:', key, 'result:', saved)
-    return saved
-  }
+  const getResumeTime = useCallback((): number | null => readProgress(key), [key])
 
   return { save, clear, getResumeTime, hasProgress: progress !== null }
 }

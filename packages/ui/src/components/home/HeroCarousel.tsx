@@ -61,6 +61,8 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
     Promise.all(fetchers).then(results => {
       const all = results.flat().sort(() => Math.random() - 0.5).slice(0, 6)
       setSlides(all)
+      // Keep the index valid if this effect re-runs and returns fewer slides.
+      setCurrent(0)
     }).catch(() => {})
   }, [type])
 
@@ -92,8 +94,10 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
     >
       {slides.map((s, i) => (
         <div
-          key={s.id}
-          className={cn('absolute inset-0 transition-opacity duration-700', i === current ? 'opacity-100' : 'opacity-0')}
+          // Movie and TV ids share the same numeric space on TMDB, and the
+          // mixed carousel interleaves both — the raw id alone can collide.
+          key={`${s.type}-${s.id}`}
+          className={cn('pointer-events-none absolute inset-0 transition-opacity duration-700', i === current ? 'opacity-100' : 'opacity-0')}
         >
           {s.backdropPath && (
             <img src={getImageUrl(s.backdropPath, 'original')!} alt="" className="h-full w-full object-cover" />

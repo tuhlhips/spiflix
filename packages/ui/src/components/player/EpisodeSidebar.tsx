@@ -37,11 +37,13 @@ export function EpisodeSidebar({ tmdbId, currentSeason, currentEpisode, seasons,
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     api.tmdb.season(tmdbId, selectedSeason)
-      .then(data => setEpisodes(data.episodes || []))
-      .catch(() => setEpisodes([]))
-      .finally(() => setLoading(false))
+      .then(data => { if (!cancelled) setEpisodes(data.episodes || []) })
+      .catch(() => { if (!cancelled) setEpisodes([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [tmdbId, selectedSeason])
 
   const selectEpisode = (ep: Episode) => {
@@ -102,7 +104,7 @@ export function EpisodeSidebar({ tmdbId, currentSeason, currentEpisode, seasons,
       </div>
 
       {/* Episode list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" data-lenis-prevent>
         {loading ? (
           <div className="flex h-40 items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />

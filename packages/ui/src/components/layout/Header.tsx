@@ -42,10 +42,15 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 z-50 flex w-full justify-center pt-4">
+      {/* pointer-events-none: this bar spans the full viewport width but only
+          the centered pill is visible. Without this, its transparent side
+          regions would sit on top of page content (z-50) and swallow clicks on
+          anything beneath the top strip — e.g. a page's top-right button. The
+          interactive children below opt back in with pointer-events-auto. */}
+      <header className="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center pt-4">
         <div
           className={cn(
-            'relative inline-flex items-center gap-1 overflow-hidden rounded-full border border-border/50',
+            'pointer-events-auto relative inline-flex items-center gap-1 overflow-hidden rounded-full border border-border/50',
             'bg-background/80 backdrop-blur-xl px-1.5 py-1.5',
             'shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.05),0_4px_16px_rgba(0,0,0,0.1),0_8px_24px_rgba(0,0,0,0.08)]',
           )}
@@ -117,7 +122,7 @@ export function Header() {
 
         {/* Mobile nav dropdown */}
         {mobileMenuOpen && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-[90vw] max-w-sm rounded-xl border border-border bg-background/95 backdrop-blur-xl p-2 shadow-xl">
+          <div className="pointer-events-auto absolute top-16 left-1/2 -translate-x-1/2 w-[90vw] max-w-sm rounded-xl border border-border bg-background/95 backdrop-blur-xl p-2 shadow-xl">
             {navLinks.map(({ to, labelKey }) => {
               const active = location.pathname === to
               return (

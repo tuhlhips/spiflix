@@ -92,14 +92,14 @@ export default class VixSrcProvider extends BaseProvider {
         url: this.createProxyUrl(masterUrl, {
           ...this.headers,
           Referer: embedUrl,
-        }),
+        }, new Date(Number(tokenData.expires) * 1000).getTime()),
         type: 'hls',
         quality: `${bestResolution}p`,
         provider: { id: this.config.id, name: this.config.name },
         audioTracks: this.parseAudioTracks(playlist),
       }
 
-      return { sources: [source], subtitles, diagnostics: [] }
+      return { sources: [source], subtitles, diagnostics: [], expiresAt: new Date(Number(tokenData.expires) * 1000).toISOString() }
     } catch (err: any) {
       return this.emptyResult([this.errorDiagnostic(err.message)])
     }
@@ -112,8 +112,11 @@ export default class VixSrcProvider extends BaseProvider {
 
     if (!token || !expires || !playlist) return null
 
-    // Check if token is expired
-    if (parseInt(expires, 10) * 1000 - 60_000 < Date.now()) return null
+    // Check if token is expired. A non-numeric expires must be rejected here:
+    // NaN compares false against everything, so it would sail through this
+    // check and produce proxy URLs with an invalid expiry downstream.
+    const expiresMs = Number(expires) * 1000
+    if (!Number.isFinite(expiresMs) || expiresMs - 60_000 < Date.now()) return null
 
     return { token, expires, playlist }
   }

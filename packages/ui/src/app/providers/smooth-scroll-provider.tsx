@@ -9,7 +9,6 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
     if (isMobile) return
     const lenis = new Lenis({
       autoRaf: true,
-      prevent: (node) => node.classList.contains('lenis-disabled'),
     })
     return () => lenis.destroy()
   }, [isMobile])

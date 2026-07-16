@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Film, Tv, Loader2 } from 'lucide-react'
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandItem } from 'cmdk'
@@ -33,27 +33,26 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const [filter, setFilter] = useState<MediaFilter>('all')
   const { open: openDrawer } = useDrawer()
 
-  const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); return }
-    setLoading(true)
-    try {
-      const data = await api.tmdb.search(q)
-      const all: SearchResult[] = [
-        ...data.movies.map((m: any) => ({ ...m, media_type: 'movie' as const })),
-        ...data.tv.map((t: any) => ({ ...t, media_type: 'tv' as const })),
-      ]
-      setResults(all)
-    } catch {
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    const timer = setTimeout(() => search(query), 400)
-    return () => clearTimeout(timer)
-  }, [query, search])
+    let cancelled = false
+    if (query.length < 2) { setResults([]); setLoading(false); return }
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const data = await api.tmdb.search(query)
+        if (cancelled) return
+        setResults([
+          ...data.movies.map((m: any) => ({ ...m, media_type: 'movie' as const })),
+          ...data.tv.map((t: any) => ({ ...t, media_type: 'tv' as const })),
+        ])
+      } catch {
+        if (!cancelled) setResults([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }, 400)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [query])
 
   useEffect(() => {
     if (!open) { setQuery(''); setResults([]); setFilter('all') }
