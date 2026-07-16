@@ -3,6 +3,16 @@ import { initReactI18next } from 'react-i18next'
 import Backend from 'i18next-http-backend'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
+// Migrate JSON-quoted locale values left behind by older Settings code
+// ('"en"' instead of 'en') — they would otherwise leak into the locale
+// load path (/locales/"en"/...) and API query params.
+try {
+  const stored = localStorage.getItem('spiflix-locale')
+  if (stored && /^".*"$/.test(stored)) {
+    localStorage.setItem('spiflix-locale', JSON.parse(stored))
+  }
+} catch { /* private browsing or corrupted value — detector will fall back */ }
+
 i18n
   .use(Backend)
   .use(LanguageDetector)

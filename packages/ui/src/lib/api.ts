@@ -1,11 +1,24 @@
 const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '')
 
+// Older Settings code stored these values JSON-stringified (extra quotes:
+// '"en"'), and usePersistentState still does for the region. Unwrap so we
+// never send language="en" (quotes included) upstream.
+function unquote(value: string | null): string | null {
+  if (!value) return value
+  try {
+    const parsed = JSON.parse(value)
+    return typeof parsed === 'string' ? parsed : value
+  } catch {
+    return value
+  }
+}
+
 function getLang(): string {
-  try { return localStorage.getItem('spiflix-locale') || 'en-US' } catch { return 'en-US' }
+  try { return unquote(localStorage.getItem('spiflix-locale')) || 'en-US' } catch { return 'en-US' }
 }
 
 function getRegion(): string {
-  try { return localStorage.getItem('spiflix-region') || 'US' } catch { return 'US' }
+  try { return unquote(localStorage.getItem('spiflix-region')) || 'US' } catch { return 'US' }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
