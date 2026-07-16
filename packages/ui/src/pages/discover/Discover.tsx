@@ -4,18 +4,28 @@ import { api } from '@/lib/api'
 import { MediaCard } from '@/components/media/MediaCard'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Film, Tv, Shuffle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Film, Tv, Shuffle, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type SortOption = 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' | 'primary_release_date.asc' | 'original_title.asc'
+// Sort field and direction are chosen separately: the field picks *what* to
+// order by, the toggle picks the direction. They combine into TMDB's
+// "<field>.<dir>" sort_by string.
+type SortField = 'popularity' | 'vote_average' | 'primary_release_date' | 'original_title'
+type SortDir = 'asc' | 'desc'
 
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: 'popularity.desc', label: 'Popularity' },
-  { value: 'vote_average.desc', label: 'Rating' },
-  { value: 'primary_release_date.desc', label: 'Newest' },
-  { value: 'primary_release_date.asc', label: 'Oldest' },
-  { value: 'original_title.asc', label: 'A-Z' },
+const sortFields: { value: SortField; label: string }[] = [
+  { value: 'popularity', label: 'Popularity' },
+  { value: 'vote_average', label: 'Rating' },
+  { value: 'primary_release_date', label: 'Release Date' },
+  { value: 'original_title', label: 'Title' },
 ]
+
+// A direction means different things per field, so label it in context.
+function directionLabel(field: SortField, dir: SortDir): string {
+  if (field === 'original_title') return dir === 'asc' ? 'A–Z' : 'Z–A'
+  if (field === 'primary_release_date') return dir === 'desc' ? 'Newest first' : 'Oldest first'
+  return dir === 'desc' ? 'Highest first' : 'Lowest first'
+}
 
 const currentYear = new Date().getFullYear()
 const yearOptions = Array.from({ length: 50 }, (_, i) => currentYear - i)
@@ -35,7 +45,8 @@ export default function Discover() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
-  const [sort, setSort] = useState<SortOption>('popularity.desc')
+  const [sortField, setSortField] = useState<SortField>('popularity')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [yearFrom, setYearFrom] = useState<number | ''>('')
   const [yearTo, setYearTo] = useState<number | ''>('')
 
@@ -49,16 +60,17 @@ export default function Discover() {
     let cancelled = false
     setLoading(true)
     setError(false)
-    api.tmdb.discover(type, { page, sortBy: sort, genreId: selectedGenre, yearFrom, yearTo })
+    api.tmdb.discover(type, { page, sortBy: `${sortField}.${sortDir}`, genreId: selectedGenre, yearFrom, yearTo })
       .then(results => { if (!cancelled) setResults(results) })
       .catch(() => { if (!cancelled) { setResults([]); setError(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [type, selectedGenre, page, sort, yearFrom, yearTo, reloadKey])
+  }, [type, selectedGenre, page, sortField, sortDir, yearFrom, yearTo, reloadKey])
 
   // Any filter change resets to page 1, so narrowing a filter while deep in the
   // pages can't leave us pointing past the end of a smaller result set.
-  const changeSort = (value: SortOption) => { setSort(value); setPage(1) }
+  const changeSortField = (value: SortField) => { setSortField(value); setPage(1) }
+  const toggleSortDir = () => { setSortDir(d => d === 'desc' ? 'asc' : 'desc'); setPage(1) }
   const changeGenre = (id: number | null) => { setSelectedGenre(id); setPage(1) }
   const changeYearFrom = (value: number | '') => { setYearFrom(value); setPage(1) }
   const changeYearTo = (value: number | '') => { setYearTo(value); setPage(1) }
@@ -95,18 +107,31 @@ export default function Discover() {
 
       {/* Filters row */}
       <div className="flex flex-wrap gap-3 mb-6 items-end">
-        {/* Sort */}
+        {/* Sort field */}
         <div>
           <p className="text-xs text-muted-foreground mb-1">Sort by</p>
           <select
-            value={sort}
-            onChange={e => changeSort(e.target.value as SortOption)}
+            value={sortField}
+            onChange={e => changeSortField(e.target.value as SortField)}
             className="appearance-auto rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
           >
-            {sortOptions.map(o => (
+            {sortFields.map(o => (
               <option key={o.value} value={o.value} className="bg-background text-foreground">{o.label}</option>
             ))}
           </select>
+        </div>
+
+        {/* Sort direction */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Order</p>
+          <button
+            onClick={toggleSortDir}
+            aria-label={`Sort order: ${directionLabel(sortField, sortDir)}. Click to reverse.`}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {sortDir === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+            {directionLabel(sortField, sortDir)}
+          </button>
         </div>
 
         {/* Year range */}

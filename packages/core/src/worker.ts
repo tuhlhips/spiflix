@@ -244,7 +244,7 @@ async function route(req: Request): Promise<Response> {
     const type = tmdbDiscover[1] as 'movie' | 'tv'
     const requestPage = page(url)
     const sortBy = url.searchParams.get('sort_by') || undefined
-    const sortOptions = new Set(['popularity.desc', 'popularity.asc', 'vote_average.desc', 'vote_average.asc', 'primary_release_date.desc', 'primary_release_date.asc', 'first_air_date.desc', 'first_air_date.asc', 'original_title.asc'])
+    const sortOptions = new Set(['popularity.desc', 'popularity.asc', 'vote_average.desc', 'vote_average.asc', 'primary_release_date.desc', 'primary_release_date.asc', 'first_air_date.desc', 'first_air_date.asc', 'original_title.asc', 'original_title.desc'])
     const parsePositive = (value: string | null, max = Number.MAX_SAFE_INTEGER) => value === null ? undefined : /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0 && Number(value) <= max ? Number(value) : null
     const genreId = parsePositive(url.searchParams.get('with_genres'))
     const yearFrom = parsePositive(url.searchParams.get('year_from'), new Date().getFullYear() + 5)

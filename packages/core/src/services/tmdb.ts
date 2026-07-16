@@ -80,6 +80,7 @@ function sortByForType(type: 'movie' | 'tv', sortBy: string): string {
     case 'primary_release_date.desc': return 'first_air_date.desc'
     case 'primary_release_date.asc': return 'first_air_date.asc'
     case 'original_title.asc': return 'name.asc'
+    case 'original_title.desc': return 'name.desc'
     default: return sortBy
   }
 }

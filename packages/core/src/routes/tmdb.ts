@@ -11,7 +11,7 @@ export async function tmdbRoutes(app: FastifyInstance) {
   const MAX_PAGE = 500
   const MIN_YEAR = 1870
   const MAX_YEAR = new Date().getFullYear() + 5
-  const discoverSorts = new Set(['popularity.desc', 'popularity.asc', 'vote_average.desc', 'vote_average.asc', 'primary_release_date.desc', 'primary_release_date.asc', 'first_air_date.desc', 'first_air_date.asc', 'original_title.asc'])
+  const discoverSorts = new Set(['popularity.desc', 'popularity.asc', 'vote_average.desc', 'vote_average.asc', 'primary_release_date.desc', 'primary_release_date.asc', 'first_air_date.desc', 'first_air_date.asc', 'original_title.asc', 'original_title.desc'])
 
   function positiveInteger(value: string | undefined, max = Number.MAX_SAFE_INTEGER): number | null {
     if (!value || !/^\d+$/.test(value)) return null
