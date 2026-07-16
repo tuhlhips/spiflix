@@ -39,7 +39,7 @@ const profiles: { type: MediaType; sortBy: string; genreId?: number; yearFrom?: 
 export default function Surprise() {
   const navigate = useNavigate()
   const seenIds = useRef(new Set<string>())
-  const [recommendation, setRecommendation] = useState<{ item: Recommendation; type: MediaType; genres: string[] } | null>(null)
+  const [recommendation, setRecommendation] = useState<{ item: Recommendation; type: MediaType; genres: string[]; imdbId: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -68,10 +68,19 @@ export default function Surprise() {
         if (item) {
           seenIds.current.add(`${profile.type}:${item.id}`)
           const genreNames = new Map(genres.map((genre) => [genre.id, genre.name]))
+          // TV picks link to IMDb (Letterboxd is films-only), and discover
+          // results don't carry external_ids — grab them from details.
+          let imdbId: string | null = null
+          if (profile.type === 'tv') {
+            imdbId = await api.tmdb.details('tv', item.id)
+              .then((details: any) => details.external_ids?.imdb_id || null)
+              .catch(() => null)
+          }
           setRecommendation({
             item,
             type: profile.type,
             genres: (item.genre_ids || []).map((id) => genreNames.get(id)).filter((name): name is string => Boolean(name)),
+            imdbId,
           })
           return
         }
@@ -147,12 +156,17 @@ export default function Surprise() {
               <a href={`https://www.themoviedb.org/${recommendation.type}/${recommendation.item.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
                 <ExternalLink className="h-4 w-4" /> TMDB
               </a>
-              {/* letterboxd.com/tmdb/<id> redirects to the film's page; Letterboxd is films-only, so hide for TV */}
-              {recommendation.type === 'movie' && (
+              {/* Letterboxd is films-only (letterboxd.com/tmdb/<id> redirects to the
+                  film page); TV picks link to IMDb via external_ids instead. */}
+              {recommendation.type === 'movie' ? (
                 <a href={`https://letterboxd.com/tmdb/${recommendation.item.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
                   <ExternalLink className="h-4 w-4" /> Letterboxd
                 </a>
-              )}
+              ) : recommendation.imdbId ? (
+                <a href={`https://www.imdb.com/title/${recommendation.imdbId}/`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
+                  <ExternalLink className="h-4 w-4" /> IMDb
+                </a>
+              ) : null}
               <button onClick={() => void copyId()} className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium hover:bg-muted/80">
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? 'Copied' : 'Copy ID'}
               </button>

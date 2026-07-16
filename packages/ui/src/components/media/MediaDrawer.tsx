@@ -45,6 +45,7 @@ interface MediaData {
   credits: { cast: CastMember[] }
   recommendations: { results: any[] }
   videos: { results: { key: string; site: string; type: string }[] }
+  external_ids?: { imdb_id?: string | null }
   seasons?: Season[]
   type: 'movie' | 'tv'
 }
@@ -223,8 +224,9 @@ export function MediaDrawer() {
                     {t('drawer.trailer')}
                   </button>
                 )}
-                {/* letterboxd.com/tmdb/<id> redirects to the film's page; Letterboxd is films-only, so hide for TV */}
-                {data.type === 'movie' && (
+                {/* Letterboxd is films-only (letterboxd.com/tmdb/<id> redirects to the
+                    film page); TV shows link to IMDb via external_ids instead. */}
+                {data.type === 'movie' ? (
                   <a
                     href={`https://letterboxd.com/tmdb/${data.id}`}
                     target="_blank"
@@ -234,7 +236,17 @@ export function MediaDrawer() {
                     <ExternalLink className="h-4 w-4" />
                     Letterboxd
                   </a>
-                )}
+                ) : data.external_ids?.imdb_id ? (
+                  <a
+                    href={`https://www.imdb.com/title/${data.external_ids.imdb_id}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all hover:bg-white/20 hover:text-white hover:scale-105"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    IMDb
+                  </a>
+                ) : null}
               </div>
 
               {/* Overview */}
