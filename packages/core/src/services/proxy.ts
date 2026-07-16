@@ -88,7 +88,11 @@ function rewriteHlsUri(value: string, baseUrl: string, headers: Record<string, s
 /** Rewrite nested playlist/key/segment URLs so native HLS never escapes the proxy. */
 function rewriteHlsManifest(manifest: string, baseUrl: string, headers: Record<string, string>, expiresAt: number): string {
   return manifest.split(/(\r?\n)/).map(line => {
-    if (!line || /^\s*#EXTM3U/.test(line)) return line
+    // The split keeps the newline separators as array entries — they (and
+    // whitespace-only lines) must pass through untouched: new URL('', base)
+    // resolves to the base URL itself, so rewriting them would inject a
+    // proxied copy of the master URL where every line break used to be.
+    if (!line || line.trim() === '' || /^\s*#EXTM3U/.test(line)) return line
     if (line.startsWith('#')) {
       return line.replace(/URI="([^"]+)"/g, (_match, uri: string) => `URI="${rewriteHlsUri(uri, baseUrl, headers, expiresAt)}"`)
     }
