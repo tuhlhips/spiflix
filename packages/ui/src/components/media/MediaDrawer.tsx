@@ -98,6 +98,10 @@ export function MediaDrawer() {
         const mediaType = payload.type
         setData({
           ...d,
+          // TMDB uses different field names per media type: TV details carry
+          // `name`/`first_air_date` where movies carry `title`/`release_date`.
+          title: d.title || d.name || '',
+          release_date: d.release_date || d.first_air_date || '',
           seasons: d.seasons?.filter((s: Season) => s.episode_count > 0),
           type: mediaType,
         })
