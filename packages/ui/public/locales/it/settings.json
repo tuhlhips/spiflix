@@ -1,0 +1,62 @@
+{
+  "title": "Impostazioni",
+  "common": {
+    "cancel": "Annulla"
+  },
+  "tabs": {
+    "appearance": "Aspetto",
+    "playback": "Riproduzione",
+    "history": "Cronologia",
+    "backend": "Backend",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "Tema",
+    "dark": "Scuro",
+    "light": "Chiaro",
+    "system": "Sistema",
+    "accent_color": "Colore d'accento"
+  },
+  "playback": {
+    "autoplay": "Riproduci automaticamente l'episodio successivo",
+    "autoplay_desc": "Avvia automaticamente l'episodio successivo dopo un conto alla rovescia di 5 s",
+    "auto_skip_intro": "Salta automaticamente le intro",
+    "auto_skip_intro_desc": "Salta automaticamente i segmenti di introduzione quando sono disponibili i dati di temporizzazione"
+  },
+  "history": {
+    "title": "Cronologia di visione",
+    "empty": "Nessuna cronologia di visione",
+    "clear_all": "Cancella tutto",
+    "items": "elementi",
+    "movie": "Film",
+    "tv": "Serie",
+    "clear_confirm_title": "Cancellare la cronologia di visione?",
+    "clear_confirm_desc": "Questo rimuove tutti i titoli dalla cronologia. L'operazione non può essere annullata."
+  },
+  "reset": {
+    "title": "Reimposta tutti i dati",
+    "desc": "Cancella cronologia, impostazioni e preferenze su questo dispositivo.",
+    "button": "Reimposta tutto",
+    "confirm_title": "Reimpostare tutti i dati dell'app?",
+    "confirm_desc": "Questo cancella cronologia, tema, lingua e tutte le preferenze su questo dispositivo. L'operazione non può essere annullata."
+  },
+  "backend": {
+    "title": "Backend",
+    "url": "URL del backend",
+    "url_placeholder": "Lascia vuoto per il valore predefinito",
+    "url_desc": "URL del backend personalizzato. Lascia vuoto per usare quello predefinito.",
+    "connection_status": "Stato della connessione",
+    "checking": "Verifica in corso…",
+    "connected": "Connesso",
+    "disconnected": "Disconnesso"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "Chiave API TMDB",
+    "configured": "Configurata lato server",
+    "language": "Lingua",
+    "language_desc": "Lingua dell'interfaccia e di titoli, locandine e trame di TMDB.",
+    "region": "Regione",
+    "region_desc": "Influisce sulla disponibilità dei contenuti TMDB"
+  }
+}

@@ -29,7 +29,7 @@ export function parseVTT(text: string) {
   return cues
 }
 
-function parseVTTTime(timeStr: string) {
+export function parseVTTTime(timeStr: string) {
   const parts = timeStr.split(':')
   let hours: number
   let minutes: number

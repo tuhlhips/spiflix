@@ -10,6 +10,12 @@ const Movies = lazy(() => import('../pages/movies/Movies'))
 const Shows = lazy(() => import('../pages/shows/Shows'))
 const Discover = lazy(() => import('../pages/discover/Discover'))
 const Surprise = lazy(() => import('../pages/surprise/Surprise'))
+const Search = lazy(() => import('../pages/search/Search'))
+const MyList = lazy(() => import('../pages/my-list/MyList'))
+const Episodes = lazy(() => import('../pages/episodes/Episodes'))
+const Profiles = lazy(() => import('../pages/profiles/Profiles'))
+const Party = lazy(() => import('../pages/party/Party'))
+const PartyRoom = lazy(() => import('../pages/party/PartyRoom'))
 const Settings = lazy(() => import('../pages/settings/Settings'))
 const Disclaimer = lazy(() => import('../pages/disclaimer/Disclaimer'))
 const WatchMovie = lazy(() => import('../pages/watch/movie/WatchMovie'))
@@ -34,11 +40,17 @@ export default function App() {
             <Route path="/movies" element={<Movies />} />
             <Route path="/shows" element={<Shows />} />
             <Route path="/discover" element={<Discover />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/my-list" element={<MyList />} />
+            <Route path="/tv/:id/episodes" element={<Episodes />} />
+            <Route path="/party" element={<Party />} />
             <Route path="/surprise" element={<Surprise />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
           </Route>
           <Route element={<BlankLayout />}>
+            <Route path="/profiles" element={<Profiles />} />
+            <Route path="/party/:room" element={<PartyRoom />} />
             <Route path="/watch/movie/:id" element={<WatchMovie />} />
             <Route path="/watch/tv/:id" element={<WatchTv />} />
           </Route>

@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '')
+const BUILD_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '')
 
 // Older Settings code stored these values JSON-stringified (extra quotes:
 // '"en"'), and usePersistentState still does for the region. Unwrap so we
@@ -13,6 +13,19 @@ function unquote(value: string | null): string | null {
   }
 }
 
+/**
+ * Backend base URL. The Settings → Backend override (spiflix-omss-url) wins
+ * over the build-time VITE_API_URL; read at request time so changing it in
+ * Settings takes effect without a rebuild or reload.
+ */
+export function getApiBase(): string {
+  try {
+    const custom = unquote(localStorage.getItem('spiflix-omss-url'))?.trim()
+    if (custom && /^https?:\/\//i.test(custom)) return custom.replace(/\/+$/, '')
+  } catch {}
+  return BUILD_BASE
+}
+
 function getLang(): string {
   try { return unquote(localStorage.getItem('spiflix-locale')) || 'en-US' } catch { return 'en-US' }
 }
@@ -22,7 +35,7 @@ function getRegion(): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = new URL(`${BASE_URL}${path}`, window.location.origin)
+  const url = new URL(`${getApiBase()}${path}`, window.location.origin)
   if (!url.searchParams.has('language')) url.searchParams.set('language', getLang())
   if (!url.searchParams.has('region')) url.searchParams.set('region', getRegion())
 

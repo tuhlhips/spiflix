@@ -1,0 +1,62 @@
+{
+  "title": "设置",
+  "common": {
+    "cancel": "取消"
+  },
+  "tabs": {
+    "appearance": "外观",
+    "playback": "播放",
+    "history": "历史记录",
+    "backend": "后端",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "主题",
+    "dark": "深色",
+    "light": "浅色",
+    "system": "跟随系统",
+    "accent_color": "强调色"
+  },
+  "playback": {
+    "autoplay": "自动播放下一集",
+    "autoplay_desc": "在 5 秒倒计时后自动播放下一集",
+    "auto_skip_intro": "自动跳过片头",
+    "auto_skip_intro_desc": "在有时间数据时自动跳过片头片段"
+  },
+  "history": {
+    "title": "观看历史",
+    "empty": "暂无观看历史",
+    "clear_all": "全部清除",
+    "items": "项",
+    "movie": "电影",
+    "tv": "剧集",
+    "clear_confirm_title": "清除观看历史？",
+    "clear_confirm_desc": "这将从历史记录中移除所有条目。此操作无法撤销。"
+  },
+  "reset": {
+    "title": "重置所有数据",
+    "desc": "清除此设备上的观看历史、设置和偏好。",
+    "button": "全部重置",
+    "confirm_title": "重置应用的所有数据？",
+    "confirm_desc": "这将清除此设备上的历史记录、主题、语言和所有偏好。此操作无法撤销。"
+  },
+  "backend": {
+    "title": "后端",
+    "url": "后端 URL",
+    "url_placeholder": "留空则使用默认值",
+    "url_desc": "自定义后端 URL。留空则使用默认值。",
+    "connection_status": "连接状态",
+    "checking": "检查中…",
+    "connected": "已连接",
+    "disconnected": "已断开"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "TMDB API 密钥",
+    "configured": "已在服务器端配置",
+    "language": "语言",
+    "language_desc": "界面语言以及 TMDB 标题、海报和简介的语言。",
+    "region": "地区",
+    "region_desc": "影响 TMDB 内容的可用性"
+  }
+}

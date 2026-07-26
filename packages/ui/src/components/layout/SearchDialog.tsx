@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search, Film, Tv, Loader2 } from 'lucide-react'
+import { Search, Film, Tv, Loader2, ArrowRight } from 'lucide-react'
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandItem } from 'cmdk'
 import { api } from '@/lib/api'
 import { getImageUrl, cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<MediaFilter>('all')
   const { open: openDrawer } = useDrawer()
+  const navigate = useNavigate()
 
   useEffect(() => {
     let cancelled = false
@@ -58,6 +60,14 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     if (!open) { setQuery(''); setResults([]); setFilter('all') }
   }, [open])
 
+  // Lock background scroll while the dialog is open.
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [open])
+
   const displayResults = results.filter(r => filter === 'all' || r.media_type === filter)
 
   const handleSelect = (item: SearchResult) => {
@@ -66,15 +76,17 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   }
 
   const filters: { key: MediaFilter; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'movie', label: 'Movies' },
-    { key: 'tv', label: 'TV' },
+    { key: 'all', label: t('search.all') },
+    { key: 'movie', label: t('search.movies') },
+    { key: 'tv', label: t('search.tv') },
   ]
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} label="Search">
       <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+        {/* Click-away: the whole overlay lives inside the cmdk dialog, so
+            Radix's outside-click never fires — the backdrop closes instead. */}
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
 
         <div className="relative w-full max-w-lg mx-4 rounded-xl border border-border bg-background shadow-2xl overflow-hidden">
           <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -110,14 +122,14 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
             ))}
             {results.length > 0 && (
               <span className="ml-auto text-[10px] text-muted-foreground self-center">
-                {displayResults.length} results
+                {displayResults.length} {t('search.results')}
               </span>
             )}
           </div>
 
           <CommandList className="max-h-[50vh] overflow-y-auto p-2">
             <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
-              {query.length < 2 ? 'Type at least 2 characters to search' : 'No results found'}
+              {query.length < 2 ? t('search.typeHint') : t('search.noResults')}
             </CommandEmpty>
 
             {displayResults.map((item) => (
@@ -155,6 +167,17 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                 </div>
               </CommandItem>
             ))}
+
+            {query.trim().length >= 2 && (
+              <CommandItem
+                value={`see-all-results-${query}`}
+                onSelect={() => { onOpenChange(false); navigate(`/search?q=${encodeURIComponent(query.trim())}`) }}
+                className="mt-1 flex items-center justify-center gap-2 rounded-lg p-2.5 text-sm font-medium text-primary transition-colors aria-selected:bg-muted cursor-pointer"
+              >
+                {t('search.seeAll', { query: query.trim() })}
+                <ArrowRight className="h-4 w-4" />
+              </CommandItem>
+            )}
           </CommandList>
         </div>
       </div>

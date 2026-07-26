@@ -1,0 +1,62 @@
+{
+  "title": "Ajustes",
+  "common": {
+    "cancel": "Cancelar"
+  },
+  "tabs": {
+    "appearance": "Apariencia",
+    "playback": "Reproducción",
+    "history": "Historial",
+    "backend": "Backend",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "Tema",
+    "dark": "Oscuro",
+    "light": "Claro",
+    "system": "Sistema",
+    "accent_color": "Color de acento"
+  },
+  "playback": {
+    "autoplay": "Reproducir el siguiente episodio automáticamente",
+    "autoplay_desc": "Reproduce automáticamente el siguiente episodio tras una cuenta atrás de 5 s",
+    "auto_skip_intro": "Omitir intros automáticamente",
+    "auto_skip_intro_desc": "Omite los segmentos de introducción automáticamente cuando hay datos de tiempo disponibles"
+  },
+  "history": {
+    "title": "Historial de reproducción",
+    "empty": "Aún no hay historial de reproducción",
+    "clear_all": "Borrar todo",
+    "items": "elementos",
+    "movie": "Película",
+    "tv": "Serie",
+    "clear_confirm_title": "¿Borrar el historial de reproducción?",
+    "clear_confirm_desc": "Esto elimina todos los títulos de tu historial. No se puede deshacer."
+  },
+  "reset": {
+    "title": "Restablecer todos los datos",
+    "desc": "Borra tu historial, ajustes y preferencias en este dispositivo.",
+    "button": "Restablecer todo",
+    "confirm_title": "¿Restablecer todos los datos de la app?",
+    "confirm_desc": "Esto borra tu historial, tema, idioma y todas las preferencias en este dispositivo. No se puede deshacer."
+  },
+  "backend": {
+    "title": "Backend",
+    "url": "URL del backend",
+    "url_placeholder": "Dejar vacío para el valor predeterminado",
+    "url_desc": "URL de backend personalizada. Déjalo vacío para usar el valor predeterminado.",
+    "connection_status": "Estado de la conexión",
+    "checking": "Comprobando…",
+    "connected": "Conectado",
+    "disconnected": "Desconectado"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "Clave de API de TMDB",
+    "configured": "Configurada en el servidor",
+    "language": "Idioma",
+    "language_desc": "Idioma de la interfaz y de los títulos, carteles y sinopsis de TMDB.",
+    "region": "Región",
+    "region_desc": "Afecta a la disponibilidad de contenido de TMDB"
+  }
+}

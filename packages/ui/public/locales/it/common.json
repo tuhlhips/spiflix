@@ -1,0 +1,146 @@
+{
+  "app": {
+    "name": "Spiflix",
+    "tagline": "Streaming di film e serie TV"
+  },
+  "nav": {
+    "home": "Home",
+    "movies": "Film",
+    "shows": "Serie TV",
+    "discover": "Scopri",
+    "settings": "Impostazioni"
+  },
+  "header": {
+    "connected": "Backend connesso",
+    "disconnected": "Backend disconnesso",
+    "search": "Cerca"
+  },
+  "search": {
+    "placeholder": "Cerca film e serie TV…",
+    "typeHint": "Digita almeno 2 caratteri",
+    "noResults": "Nessun risultato trovato",
+    "all": "Tutti",
+    "movies": "Film",
+    "tv": "Serie TV",
+    "results": "risultati"
+  },
+  "home": {
+    "trendingMovies": "Film di tendenza",
+    "trendingTv": "Serie TV di tendenza",
+    "popularMovies": "Film popolari",
+    "popularTv": "Serie TV popolari",
+    "topRated": "Più votati"
+  },
+  "media": {
+    "trendingNow": "Di tendenza ora",
+    "popular": "Popolari",
+    "topRated": "Più votati",
+    "watchNow": "Guarda ora",
+    "moreInfo": "Altre info",
+    "noImage": "Nessuna immagine"
+  },
+  "drawer": {
+    "play": "Riproduci",
+    "trailer": "Trailer",
+    "episodes": "Episodi",
+    "cast": "Cast",
+    "recommendations": "Consigliati",
+    "noImage": "Nessuna immagine",
+    "noOverview": "Nessuna trama",
+    "grid": "Griglia",
+    "list": "Elenco",
+    "loadError": "Impossibile caricare i dettagli di questo titolo.",
+    "tryAgain": "Riprova"
+  },
+  "discover": {
+    "title": "Scopri",
+    "surpriseMe": "Sorprendimi",
+    "sortBy": "Ordina per",
+    "order": "Ordine",
+    "yearFrom": "Anno da",
+    "yearTo": "Anno a",
+    "any": "Qualsiasi",
+    "all": "Tutti",
+    "movies": "Film",
+    "tvShows": "Serie TV",
+    "noResults": "Nessun risultato trovato",
+    "noResultsHint": "Prova a modificare i filtri",
+    "loadError": "Impossibile caricare i risultati. Potrebbe trattarsi di un problema temporaneo del server o di TMDB — riprova.",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "page": "Pagina",
+    "goToPage": "Vai alla pagina",
+    "go": "Vai",
+    "sort": {
+      "popularity": "Popolarità",
+      "rating": "Valutazione",
+      "releaseDate": "Data di uscita",
+      "title": "Titolo"
+    },
+    "dir": {
+      "highest": "Prima i più alti",
+      "lowest": "Prima i più bassi",
+      "newest": "Prima i più recenti",
+      "oldest": "Prima i più vecchi",
+      "az": "A–Z",
+      "za": "Z–A"
+    }
+  },
+  "surprise": {
+    "title": "Sorprendimi",
+    "subtitle": "Un film o una serie davvero casuale, scelto tra un'ampia gamma di generi ed epoche.",
+    "finding": "Stiamo cercando qualcosa per te…",
+    "moviePick": "Consiglio film",
+    "tvPick": "Consiglio serie",
+    "watchNow": "Guarda ora",
+    "another": "Un altro",
+    "copyId": "Copia ID",
+    "copied": "Copiato",
+    "backToDiscover": "Torna a Scopri",
+    "noPoster": "Nessuna locandina disponibile",
+    "noDescription": "Nessuna descrizione disponibile per questo titolo.",
+    "votes": "voti",
+    "errorNone": "Nessun consiglio disponibile. Riprova per un nuovo suggerimento.",
+    "errorGeneric": "Impossibile ottenere un consiglio in questo momento. Riprova.",
+    "errorCopy": "Impossibile copiare l'ID. Copialo manualmente."
+  },
+  "episodes": {
+    "title": "Episodi",
+    "newestFirst": "Prima i più recenti",
+    "oldestFirst": "Prima i più vecchi",
+    "none": "Nessun episodio trovato",
+    "noOverview": "Nessuna trama",
+    "season": "Stagione"
+  },
+  "notFound": {
+    "code": "404",
+    "message": "Pagina non trovata",
+    "home": "Torna alla home"
+  },
+  "common": {
+    "loading": "Caricamento…",
+    "error": "Qualcosa è andato storto",
+    "reload": "Ricarica la pagina",
+    "retry": "Riprova"
+  },
+  "footer": {
+    "pages": "Pagine",
+    "links": "Link",
+    "disclaimer": "Avvertenze",
+    "copyright": "Questo sito non ospita alcun contenuto protetto da copyright.",
+    "streamMovies": "Streaming di film e serie TV"
+  },
+  "disclaimer": {
+    "title": "Avvertenze",
+    "goBack": "Indietro",
+    "p1": "Spiflix non ospita alcun contenuto protetto da copyright sui propri server. Tutti i contenuti multimediali mostrati su questo sito provengono da servizi di terze parti e sono incorporati tramite link di streaming disponibili pubblicamente.",
+    "p2": "Questo sito è destinato esclusivamente a scopi educativi e personali. Non incoraggiamo né tolleriamo la pirateria o la distribuzione non autorizzata di materiale protetto da copyright.",
+    "p3": "Tutti i marchi, i loghi e i nomi commerciali sono di proprietà dei rispettivi titolari. L'uso di questi nomi non implica alcuna approvazione o affiliazione.",
+    "p4": "Se ritieni che qualsiasi contenuto disponibile tramite questo sito violi il tuo copyright, contatta direttamente il relativo host del contenuto.",
+    "p5": "Questo servizio è fornito «così com'è», senza alcuna garanzia di alcun tipo, esplicita o implicita. I gestori di questo sito non potranno essere ritenuti responsabili per eventuali danni derivanti dall'uso di questo servizio."
+  },
+  "error": {
+    "title": "Qualcosa è andato storto",
+    "reload": "Ricarica la pagina"
+  }
+}

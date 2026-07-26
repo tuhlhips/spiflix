@@ -1,5 +1,8 @@
 import { ProviderRegistry } from './providers/registry.js'
 import VixSrcProvider from './providers/vixsrc/index.js'
+import VidSrcProvider from './providers/vidsrc/index.js'
+import IcefyProvider from './providers/icefy/index.js'
+import VidNestProvider from './providers/vidnest/index.js'
 import { proxyRequest } from './services/proxy.js'
 import { tmdb } from './services/tmdb.js'
 import { sourceCache } from './services/cache.js'
@@ -21,6 +24,16 @@ async function getRegistry(): Promise<ProviderRegistry> {
     // filesystem (readdir + dynamic import), which doesn't exist in the
     // Workers runtime and can't be bundled. New providers must be added here
     // as well as in the providers/ directory (Fastify still auto-discovers).
+    // English-primary providers first so language-tied ordering favours them;
+    // VixSrc (Italian-primary) is registered last as a fallback. Most reliable
+    // English source (VidNest) leads; CineSu/VidRock are omitted here because
+    // they are disabled (they never resolve from our hosts). VidLink is
+    // deliberately absent too: it mints its token in a vendored WASM module
+    // that needs `fs` + `eval`, neither of which exists here. It is Node-only
+    // and reaches Fastify through auto-discovery.
+    registry.register(new VidNestProvider())
+    registry.register(new VidSrcProvider())
+    registry.register(new IcefyProvider())
     registry.register(new VixSrcProvider())
   }
   return registry

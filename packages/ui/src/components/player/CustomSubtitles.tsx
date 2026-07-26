@@ -1,10 +1,26 @@
 import { useEffect, useRef } from 'react'
-import { parseVTT } from '@/lib/subtitles'
+import { parseVTT, parseVTTTime } from '@/lib/subtitles'
 import { useSubtitleSettings, type SubtitleSettings } from '@/hooks/useSubtitleSettings'
 
 interface CustomSubtitlesProps {
   url: string
   videoRef: React.RefObject<HTMLVideoElement | null>
+}
+
+/**
+ * Segmented playlists carry cue times relative to each segment, anchored by an
+ * X-TIMESTAMP-MAP header (MPEGTS 90kHz ticks ↔ local cue time). Only applied
+ * for multi-segment playlists — single-segment VOD files (VixSrc) use absolute
+ * cue times and must not be shifted.
+ */
+function segmentTimestampOffset(text: string): number {
+  const header = text.match(/X-TIMESTAMP-MAP=([^\r\n]+)/)?.[1]
+  if (!header) return 0
+  const mpegts = header.match(/MPEGTS:(\d+)/)?.[1]
+  const local = header.match(/LOCAL:([\d:.]+)/)?.[1]
+  if (!mpegts || !local) return 0
+  const offset = Number(mpegts) / 90000 - parseVTTTime(local)
+  return Number.isFinite(offset) ? offset : 0
 }
 
 /**
@@ -44,20 +60,51 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
         const text = await res.text()
         if (cancelled) return
 
-        let vttText = text
+        let cues: { start: number; end: number; text: string }[]
 
         if (text.startsWith('#EXTM3U')) {
-          const match = text.match(/^https?:\/\/.+\.vtt[^\s]*/m)
-          if (match) {
-            try {
-              const vttRes = await fetch(match[0])
-              vttText = await vttRes.text()
-            } catch { return }
-          } else { return }
+          // Subtitle playlists list the VTT as one or more "segments". Segment
+          // URLs may be absolute (https://…​.vtt) or already rewritten to our
+          // proxy (/v1/proxy?data=…, where the real ".vtt" is hidden inside a
+          // base64 blob), so every non-comment line is resolved against the
+          // playlist URL. VixSrc uses a single segment for a whole movie, but
+          // segmented tracks (common for TV) split the VTT into many chunks —
+          // fetching only the first would drop everything after it.
+          const segments = text
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(line => line && !line.startsWith('#'))
+          if (segments.length === 0) return
+          // Modest batching so a 200-segment episode doesn't fire 200
+          // parallel requests at the proxy. Each segment is fetched
+          // independently and tolerated: a single failed/empty chunk is
+          // skipped, not fatal — otherwise one bad request in the middle of
+          // an episode would drop every caption.
+          const texts: string[] = []
+          const BATCH = 8
+          for (let i = 0; i < segments.length && !cancelled; i += BATCH) {
+            const batch = await Promise.allSettled(
+              segments.slice(i, i + BATCH).map(async seg => {
+                const r = await fetch(new URL(seg, url).toString())
+                if (!r.ok) throw new Error(`segment ${r.status}`)
+                return r.text()
+              }),
+            )
+            for (const res of batch) {
+              if (res.status === 'fulfilled') texts.push(res.value)
+            }
+          }
+          if (cancelled) return
+          const multi = segments.length > 1
+          cues = texts.flatMap(segText => {
+            const offset = multi ? segmentTimestampOffset(segText) : 0
+            return parseVTT(segText).map(cue => ({ ...cue, start: cue.start + offset, end: cue.end + offset }))
+          })
+        } else {
+          cues = parseVTT(text)
         }
 
         if (cancelled) return
-        const cues = parseVTT(vttText)
         if (cues.length === 0) return
 
         const track = video!.addTextTrack('subtitles', 'English', 'en')

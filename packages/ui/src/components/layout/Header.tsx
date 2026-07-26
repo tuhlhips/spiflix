@@ -1,37 +1,56 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Search, Settings, Film, Menu, X, Globe } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SearchDialog } from './SearchDialog'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
+import { useProfiles, profileGradient } from '@/app/providers/profiles-provider'
 
 const navLinks = [
   { to: '/', labelKey: 'nav.home' },
   { to: '/movies', labelKey: 'nav.movies' },
   { to: '/shows', labelKey: 'nav.shows' },
   { to: '/discover', labelKey: 'nav.discover' },
+  { to: '/my-list', labelKey: 'nav.myList' },
 ]
 
 export function Header() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
+  const { activeProfile } = useProfiles()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [backendOnline, setBackendOnline] = useState(false)
 
   useEffect(() => {
-    api.health().then(() => setBackendOnline(true)).catch(() => setBackendOnline(false))
+    const check = () => api.health().then(() => setBackendOnline(true)).catch(() => setBackendOnline(false))
+    check()
+    // Skip the poll while the tab is hidden; re-check immediately on return so
+    // the badge is fresh when the user comes back rather than up to 30s stale.
     const interval = setInterval(() => {
-      api.health().then(() => setBackendOnline(true)).catch(() => setBackendOnline(false))
+      if (document.visibilityState === 'visible') check()
     }, 30000)
-    return () => clearInterval(interval)
+    const onVisible = () => { if (document.visibilityState === 'visible') check() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+      // Cmd/Ctrl+K and "/" — the browser's own find (Cmd+F) stays untouched.
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+        return
+      }
+      const target = e.target as HTMLElement
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable
+      if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault()
         setSearchOpen(true)
       }
@@ -40,6 +59,19 @@ export function Header() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // Close the mobile menu when tapping anywhere outside the header.
+  const headerRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [mobileMenuOpen])
+
   return (
     <>
       {/* pointer-events-none: this bar spans the full viewport width but only
@@ -47,7 +79,7 @@ export function Header() {
           regions would sit on top of page content (z-50) and swallow clicks on
           anything beneath the top strip — e.g. a page's top-right button. The
           interactive children below opt back in with pointer-events-auto. */}
-      <header className="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center pt-4">
+      <header ref={headerRef} className="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center pt-4">
         <div
           className={cn(
             'pointer-events-auto relative inline-flex items-center gap-1 overflow-hidden rounded-full border border-border/50',
@@ -108,6 +140,17 @@ export function Header() {
             >
               <Settings className="h-4 w-4" />
             </Link>
+
+            {/* Active profile — opens the "Who's watching?" switcher. */}
+            <button
+              onClick={() => navigate('/profiles')}
+              className="ml-0.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white ring-1 ring-white/15 transition-transform hover:scale-105"
+              style={{ background: profileGradient(activeProfile) }}
+              aria-label={activeProfile.name}
+              title={activeProfile.name}
+            >
+              {activeProfile.initial}
+            </button>
 
             {/* Mobile menu toggle */}
             <button

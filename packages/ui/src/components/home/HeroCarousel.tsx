@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Play, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getImageUrl, cn } from '@/lib/utils'
@@ -14,9 +15,7 @@ interface HeroSlide {
   posterPath: string | null
   rating: number
   year: string
-  genres: string[]
   type: 'movie' | 'tv'
-  runtime?: number
 }
 
 interface HeroCarouselProps {
@@ -25,6 +24,7 @@ interface HeroCarouselProps {
 
 export function HeroCarousel({ type }: HeroCarouselProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { open: openDrawer } = useDrawer()
   const [slides, setSlides] = useState<HeroSlide[]>([])
   const [current, setCurrent] = useState(0)
@@ -33,29 +33,23 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
   const progressRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const mapMovie = (i: any): HeroSlide => ({
+      id: i.id, title: i.title, overview: i.overview, backdropPath: i.backdrop_path,
+      posterPath: i.poster_path, rating: i.vote_average, year: (i.release_date || '').slice(0, 4),
+      type: 'movie',
+    })
+    const mapTv = (i: any): HeroSlide => ({
+      id: i.id, title: i.name, overview: i.overview, backdropPath: i.backdrop_path,
+      posterPath: i.poster_path, rating: i.vote_average, year: (i.first_air_date || '').slice(0, 4),
+      type: 'tv',
+    })
     const fetchers = type === 'movie'
-      ? [api.tmdb.trending('movie').then(items => items.slice(0, 6).map((i: any) => ({
-          id: i.id, title: i.title, overview: i.overview, backdropPath: i.backdrop_path,
-          posterPath: i.poster_path, rating: i.vote_average, year: (i.release_date || '').slice(0, 4),
-          genres: i.genre_ids || [], type: 'movie' as const,
-        })))]
+      ? [api.tmdb.trending('movie').then(items => items.slice(0, 6).map(mapMovie))]
       : type === 'tv'
-        ? [api.tmdb.trending('tv').then(items => items.slice(0, 6).map((i: any) => ({
-            id: i.id, title: i.name, overview: i.overview, backdropPath: i.backdrop_path,
-            posterPath: i.poster_path, rating: i.vote_average, year: (i.first_air_date || '').slice(0, 4),
-            genres: i.genre_ids || [], type: 'tv' as const,
-          })))]
+        ? [api.tmdb.trending('tv').then(items => items.slice(0, 6).map(mapTv))]
         : [
-            api.tmdb.trending('movie').then(items => items.slice(0, 5).map((i: any) => ({
-              id: i.id, title: i.title, overview: i.overview, backdropPath: i.backdrop_path,
-              posterPath: i.poster_path, rating: i.vote_average, year: (i.release_date || '').slice(0, 4),
-              genres: i.genre_ids || [], type: 'movie' as const,
-            }))),
-            api.tmdb.trending('tv').then(items => items.slice(0, 3).map((i: any) => ({
-              id: i.id, title: i.name, overview: i.overview, backdropPath: i.backdrop_path,
-              posterPath: i.poster_path, rating: i.vote_average, year: (i.first_air_date || '').slice(0, 4),
-              genres: i.genre_ids || [], type: 'tv' as const,
-            }))),
+            api.tmdb.trending('movie').then(items => items.slice(0, 5).map(mapMovie)),
+            api.tmdb.trending('tv').then(items => items.slice(0, 3).map(mapTv)),
           ]
 
     Promise.all(fetchers).then(results => {
@@ -74,13 +68,27 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
     setCurrent(p => (p - 1 + slides.length) % slides.length)
   }, [slides.length])
 
+  // `current` in the deps restarts the interval on ANY slide change (manual or
+  // auto), keeping the 6.5s window — and the progress pill, which remounts per
+  // slide — in sync. Without it, clicking an arrow could be followed by an
+  // auto-advance almost immediately.
   useEffect(() => {
     if (slides.length === 0) return
     timerRef.current = setInterval(() => {
       if (!paused) next()
     }, 6500)
     return () => clearInterval(timerRef.current)
-  }, [slides.length, paused, next])
+  }, [slides.length, paused, next, current])
+
+  // Horizontal swipe to change slides on touch devices.
+  const touchStartX = useRef<number | null>(null)
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(dx) > 40) { dx < 0 ? next() : prev() }
+    touchStartX.current = null
+  }
 
   if (slides.length === 0) return null
 
@@ -91,6 +99,8 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
       className="group relative h-[80vh] md:h-screen overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
       {slides.map((s, i) => (
         <div
@@ -100,7 +110,10 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
           className={cn('pointer-events-none absolute inset-0 transition-opacity duration-700', i === current ? 'opacity-100' : 'opacity-0')}
         >
           {s.backdropPath && (
-            <img src={getImageUrl(s.backdropPath, 'original')!} alt="" className="h-full w-full object-cover" />
+            // w1280 is visually identical to `original` at ≤1920px viewports
+            // but a fraction of the bytes — all 6 slides mount at once, so
+            // `original` (2–8MB each) meant 20MB+ of backdrops on load.
+            <img src={getImageUrl(s.backdropPath, 'w1280')!} alt="" loading={i === 0 ? 'eager' : 'lazy'} className="h-full w-full object-cover" />
           )}
         </div>
       ))}
@@ -132,14 +145,14 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
                 className="flex items-center gap-2 rounded-full bg-primary px-7 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:scale-105"
               >
                 <Play className="h-4 w-4 fill-current" />
-                Watch Now
+                {t('media.watchNow')}
               </button>
               <button
                 onClick={() => openDrawer({ id: slide.id, type: slide.type })}
                 className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all hover:bg-white/20 hover:text-white hover:scale-105"
               >
                 <Info className="h-4 w-4" />
-                More Info
+                {t('media.moreInfo')}
               </button>
             </div>
           </div>
@@ -149,7 +162,7 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
       {/* Progress dots — centered, with animated progress bar */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
         {slides.map((_, i) => (
-          <button key={i} onClick={() => setCurrent(i)} className="group/dot relative h-2.5 rounded-full transition-all duration-300" style={{ width: i === current ? '40px' : '10px' }}>
+          <button key={i} onClick={() => setCurrent(i)} aria-label={`Go to slide ${i + 1}`} className="group/dot relative h-2.5 rounded-full transition-all duration-300" style={{ width: i === current ? '40px' : '10px' }}>
             <div className={cn(
               'h-full w-full rounded-full transition-colors duration-300',
               i === current ? 'bg-primary/20' : 'bg-white/30 hover:bg-white/50',
@@ -167,15 +180,18 @@ export function HeroCarousel({ type }: HeroCarouselProps) {
       </div>
 
       {/* Navigation arrows — group-hover reveals */}
+      {/* Visible by default on touch (no hover), hover-revealed on desktop. */}
       <button
         onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60"
+        aria-label="Previous slide"
+        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-100 transition-opacity hover:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100"
       >
         <ChevronLeft className="h-6 w-6" />
       </button>
       <button
         onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60"
+        aria-label="Next slide"
+        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white opacity-100 transition-opacity hover:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100"
       >
         <ChevronRight className="h-6 w-6" />
       </button>

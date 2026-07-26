@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
-type Theme = 'dark' | 'light' | 'system'
+export type Theme = 'dark' | 'light' | 'system'
 type ColorTheme = 'default' | 'blue' | 'green' | 'purple' | 'amber' | 'sky' | 'rose'
 
 interface ThemeContextValue {
@@ -57,6 +57,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.setAttribute('data-theme', colorTheme)
     }
+    // Keep the installed-PWA status bar / tab colour in sync with the accent
+    // instead of leaving it hardcoded red in index.html.
+    const THEME_COLORS: Record<ColorTheme, string> = {
+      default: '#e92a34', blue: '#4a7bf7', green: '#12b981', purple: '#a13ef0',
+      amber: '#eda000', sky: '#33b6e6', rose: '#ee3d6e',
+    }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[colorTheme])
   }, [colorTheme])
 
   // Listen for system theme changes

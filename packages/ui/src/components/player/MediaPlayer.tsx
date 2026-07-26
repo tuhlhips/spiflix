@@ -8,9 +8,9 @@ import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import { useHistory } from '@/app/providers/history-provider'
 import { usePersistentState } from '@/hooks/useLocalStorage'
 import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
-import { getPreferredSource, isHls } from '@/utils/playback'
+import { sortSources, isHls } from '@/utils/playback'
 import { fetchSegments, type IntroDBSegment } from '@/services/introdb'
-import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang } from '@/utils/audio'
+import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang, languageName, sourceLanguages } from '@/utils/audio'
 import { usePresenceMeta } from '@/hooks/usePresenceMeta'
 import { useSafeBack } from '@/hooks/useSafeBack'
 import {
@@ -18,6 +18,7 @@ import {
   Settings, SkipBack, SkipForward, ArrowLeft, List,
   PictureInPicture, PictureInPicture2, Subtitles,
   HardDrive, Captions, Gauge, Clapperboard, Check,
+  RotateCcw, RotateCw, Monitor, Server,
 } from 'lucide-react'
 import { CustomSubtitles } from './CustomSubtitles'
 
@@ -100,11 +101,51 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [introSegments, setIntroSegments] = useState<IntroDBSegment[]>([])
   const [activeSegment, setActiveSegment] = useState<IntroDBSegment | null>(null)
   const [autoSkipIntro] = usePersistentState('spiflix-auto-skip-intro', false)
+  const [autoplayNext] = usePersistentState('spiflix-autoplay-next', true)
+  const [buffered, setBuffered] = useState(0)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
 
   usePresenceMeta({ title, posterPath, type, season, episode, episodeTitle })
 
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const stalledTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // --- Source failover ---------------------------------------------------
+  // Sources ranked best-first (preferred audio language, then quality). When
+  // the active stream turns out to be dead or malformed (e.g. Icefy sometimes
+  // serves a headerless master), we advance to the next untried source instead
+  // of stranding the user on a playback error.
+  const orderedSourcesRef = useRef<Source[]>([])
+  const failedSourceUrls = useRef<Set<string>>(new Set())
+  // A manual pick from the Source settings tab opts out of auto-failover so we
+  // don't yank the user off the source they deliberately chose.
+  const manualSourceRef = useRef(false)
+  const selectedSourceRef = useRef<Source | null>(null)
+  selectedSourceRef.current = selectedSource
+
+  /**
+   * Mark the current source failed and switch to the next viable one. Returns
+   * true if it moved to another source, false when the list is exhausted (in
+   * which case it surfaces the playback error).
+   */
+  const failoverToNextSource = useCallback(() => {
+    const failed = selectedSourceRef.current
+    if (failed) failedSourceUrls.current.add(failed.url)
+    if (manualSourceRef.current) {
+      setError(t('errors.playback_error'))
+      return false
+    }
+    const next = orderedSourcesRef.current.find(s => !failedSourceUrls.current.has(s.url))
+    if (next) {
+      console.warn(`[Player] Source failed, failing over to ${next.provider.name} (${next.quality})`)
+      setLoading(true)
+      setError(null)
+      setSelectedSource(next)
+      return true
+    }
+    setError(t('errors.playback_error'))
+    return false
+  }, [t])
 
   // Fetch sources
   useEffect(() => {
@@ -132,7 +173,12 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         setSubtitles(data.subtitles || [])
         setSelectedSubtitle(null)
         setSelectedAudioTrack(null)
-        const preferred = getPreferredSource(data.sources || [])
+        // Rank all sources once, reset failover bookkeeping, start on the best.
+        const ordered = sortSources(data.sources || [], getPreferredAudioLang())
+        orderedSourcesRef.current = ordered
+        failedSourceUrls.current = new Set()
+        manualSourceRef.current = false
+        const preferred = ordered[0]
         if (preferred) {
           setAudioTracks(preferred.audioTracks || [])
           setSelectedSource(preferred)
@@ -172,7 +218,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
 
         // Extract imdb_id from external_ids (TV) or direct field (movie)
         const imdbId = data.imdb_id || data.external_ids?.imdb_id
-        if (!imdbId) return
+        // IntroDB only carries TV segment data — movie lookups 400 upstream,
+        // so skip them instead of logging a warning on every movie.
+        if (!imdbId || type !== 'tv') return
 
         // Fetch IntroDB segments for intro/recap/outro timing
         fetchSegments(imdbId, season, episode, controller.signal)
@@ -200,6 +248,12 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     const url = selectedSource.url
     setQualities([])
     setCurrentQuality(-1)
+    // Reset the audio picker to this source's own tracks. HLS sources refine
+    // this later via AUDIO_TRACKS_UPDATED; mp4 sources keep the provider list.
+    // Without this, switching/failing over to another source (especially mp4)
+    // would leave the previous source's tracks showing.
+    setAudioTracks(selectedSource.audioTracks ?? [])
+    setSelectedAudioTrack(null)
 
     let watchId: ReturnType<typeof setTimeout> | undefined
 
@@ -207,15 +261,26 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       if (Hls.isSupported()) {
         const hls = new Hls({ enableWorker: true, lowLatencyMode: false })
         hlsRef.current = hls
+        let networkRetries = 0
+        // Destroy without tripping the effect-cleanup double-destroy guard.
+        const destroyHls = () => {
+          hls.destroy()
+          if (hlsRef.current === hls) hlsRef.current = null
+        }
 
         hls.loadSource(url)
         hls.attachMedia(video)
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setLoading(false)
-          if (hls.levels.length > 0) {
-            setQualities(hls.levels.map((l, i) => ({ index: i, height: l.height, label: `${l.height}p` })))
+          // A parsed-but-empty master (e.g. Icefy's headerless variant list) is
+          // unplayable — treat it as a dead source and move on.
+          if (hls.levels.length === 0) {
+            destroyHls()
+            failoverToNextSource()
+            return
           }
+          setLoading(false)
+          setQualities(hls.levels.map((l, i) => ({ index: i, height: l.height, label: `${l.height}p` })))
 
           const resume = getResumeTime()
           if (resume) {
@@ -234,6 +299,11 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
           const tracks = data.audioTracks
           if (!tracks || tracks.length === 0 || initialAudioTrackSet) return
           initialAudioTrackSet = true
+
+          setAudioTracks(tracks.map((t, i) => ({
+            language: t.lang ?? '',
+            label: t.name ?? t.lang ?? `Track ${i}`,
+          })))
 
           const preferred = findPreferredAudioTrack(tracks, preferredLang)
           if (preferred) {
@@ -267,15 +337,37 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         })
 
         hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          if (!data.fatal) return
+
+          // Manifest/level-level failures mean this source is broken, not just
+          // congested — reloading would loop forever, so fail over immediately.
+          const manifestFatal =
+            data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR ||
+            data.details === Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR ||
+            data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR ||
+            data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
+            data.details === Hls.ErrorDetails.LEVEL_EMPTY_ERROR
+          if (manifestFatal) {
+            destroyHls()
+            failoverToNextSource()
+            return
+          }
+
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            // Retry a transient network hiccup a few times before giving up on
+            // the source entirely.
+            if (networkRetries < 3) {
+              networkRetries++
               hls.startLoad()
-            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-              hls.recoverMediaError()
-            } else {
-              setError(t('errors.playback_error'))
-              hls.destroy()
+              return
             }
+            destroyHls()
+            failoverToNextSource()
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError()
+          } else {
+            destroyHls()
+            failoverToNextSource()
           }
         })
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -294,7 +386,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         hlsRef.current = null
       }
     }
-  }, [selectedSource, getResumeTime, t])
+  }, [selectedSource, getResumeTime, t, failoverToNextSource])
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = playbackRate
@@ -311,7 +403,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       setCurrentTime(video.currentTime)
       if (Math.floor(video.currentTime) % 10 === 0) {
         saveProgress(video.currentTime, video.duration)
-        history.add({ id: tmdbId, type, title: title || (type === 'tv' ? `S${season}E${episode}` : String(tmdbId)), currentTime: video.currentTime, duration: video.duration })
+        history.add({ id: tmdbId, type, title: title || (type === 'tv' ? `S${season}E${episode}` : String(tmdbId)), posterPath, season, episode, currentTime: video.currentTime, duration: video.duration })
       }
     }
     const onDurationChange = () => setDuration(video.duration)
@@ -324,20 +416,39 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       setLoading(true)
       clearTimeout(stalledTimer.current)
       stalledTimer.current = window.setTimeout(() => {
-        if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA && !video.paused) setError(t('errors.playback_error'))
+        // Still starved after 5s — try the next source before surfacing an
+        // error (failoverToNextSource itself errors when the list is spent).
+        if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA && !video.paused) failoverToNextSource()
       }, 5_000)
     }
-    const onAbort = () => {
-      if (!video.paused) setError(t('errors.playback_error'))
-      setLoading(false)
+    // abort fires during normal source switches/failovers too, so it must not
+    // set an error itself — genuinely dead streams surface via stalled/error.
+    const onAbort = () => setLoading(false)
+    const onProgress = () => {
+      try {
+        const ranges = video.buffered
+        if (ranges.length > 0 && Number.isFinite(video.duration) && video.duration > 0) {
+          setBuffered(ranges.end(ranges.length - 1) / video.duration)
+        }
+      } catch {}
     }
     const onError = () => {
       setLoading(false)
+      // hls.js-managed sources report fatal errors through the Hls ERROR event;
+      // only the native <video> paths (mp4, or HLS on Safari) surface here, so
+      // fail those over to the next source before giving up.
+      const src = selectedSourceRef.current
+      const hlsManaged = src != null && isHls(src) && Hls.isSupported()
+      if (!hlsManaged && failoverToNextSource()) return
       setError(t('errors.playback_error'))
     }
     const onFullscreenChange = () => {
       const webkitDocument = document as WebKitDocument
-      setFullscreen(Boolean(document.fullscreenElement || webkitDocument.webkitFullscreenElement))
+      const isFs = Boolean(document.fullscreenElement || webkitDocument.webkitFullscreenElement)
+      setFullscreen(isFs)
+      // Release the landscape lock when leaving fullscreen by any means
+      // (OS back-gesture, Esc), not only via the button.
+      if (!isFs) { try { (screen.orientation as any)?.unlock?.() } catch {} }
     }
     const onWebKitPresentationModeChange = () => {
       setIsPiP((video as WebKitVideo).webkitPresentationMode === 'picture-in-picture')
@@ -351,7 +462,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     const onEnded = () => {
       clearProgress()
       setPlaying(false)
-      if (type === 'tv' && season !== undefined && episode !== undefined) {
+      if (autoplayNext && type === 'tv' && season !== undefined && episode !== undefined) {
         setShowAutoplay(true)
       }
     }
@@ -364,6 +475,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     video.addEventListener('playing', onPlaying)
     video.addEventListener('stalled', onStalled)
     video.addEventListener('abort', onAbort)
+    video.addEventListener('progress', onProgress)
     video.addEventListener('error', onError)
     video.addEventListener('webkitpresentationmodechanged', onWebKitPresentationModeChange)
     document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -382,6 +494,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       video.removeEventListener('playing', onPlaying)
       video.removeEventListener('stalled', onStalled)
       video.removeEventListener('abort', onAbort)
+      video.removeEventListener('progress', onProgress)
       video.removeEventListener('error', onError)
       video.removeEventListener('webkitpresentationmodechanged', onWebKitPresentationModeChange)
       document.removeEventListener('fullscreenchange', onFullscreenChange)
@@ -392,7 +505,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       video.removeEventListener('enterpictureinpicture', onEnterPiP)
       video.removeEventListener('leavepictureinpicture', onLeavePiP)
     }
-  }, [tmdbId, type, season, episode, clearProgress, history, saveProgress, t, title])
+  }, [tmdbId, type, season, episode, clearProgress, history, saveProgress, t, title, posterPath, failoverToNextSource, autoplayNext])
 
   const moveEpisode = useCallback(async (direction: 1 | -1) => {
     if (type !== 'tv' || season === undefined || episode === undefined) return false
@@ -447,6 +560,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return
+      // The seek bar has its own key handling (±5s, Home/End) — without this
+      // guard both handlers fire and ArrowLeft jumps 15s instead of 5.
+      if (target.getAttribute('role') === 'slider') return
 
       const video = videoRef.current
       if (!video) return
@@ -488,18 +604,78 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // Ref mirror so the hide-timer closure sees the live value — otherwise the
+  // settings menu vanishes mid-interaction 3s after the last mouse move.
+  const showSettingsRef = useRef(false)
+  showSettingsRef.current = showSettings
+  const settingsRef = useRef<HTMLDivElement>(null)
+  const sourcePopoverRef = useRef<HTMLDivElement>(null)
+
   const resetControlsTimer = useCallback(() => {
     setShowControls(true)
     clearTimeout(controlsTimer.current)
     controlsTimer.current = setTimeout(() => {
-      if (playing) setShowControls(false)
+      if (playing && !showSettingsRef.current) setShowControls(false)
     }, 3000)
   }, [playing])
+
+  // Close the settings popover on any pointer press outside it.
+  useEffect(() => {
+    if (!showSettings) return
+    const onDown = (e: PointerEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettings(false)
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [showSettings])
+
+  // Close the source popover on any pointer press outside it.
+  useEffect(() => {
+    if (!sourcesOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (sourcePopoverRef.current && !sourcePopoverRef.current.contains(e.target as Node)) {
+        setSourcesOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [sourcesOpen])
 
   function togglePlay() {
     const video = videoRef.current
     if (!video) return
     if (video.paused) video.play(); else video.pause()
+  }
+
+  // On touch devices the first tap should reveal the controls, not pause the
+  // video. The emulated mousemove that precedes `click` already flips
+  // showControls on, so remember whether they were visible when the touch
+  // actually started.
+  const controlsVisibleAtTouchStart = useRef(true)
+  const handleVideoTouchStart = () => {
+    controlsVisibleAtTouchStart.current = showControls
+  }
+  const handleVideoClick = () => {
+    if (sourcesOpen) { setSourcesOpen(false); return }
+    const coarse = window.matchMedia('(pointer: coarse)').matches
+    if (coarse && !controlsVisibleAtTouchStart.current) {
+      controlsVisibleAtTouchStart.current = true
+      resetControlsTimer()
+      return
+    }
+    togglePlay()
+  }
+
+  // Best-effort landscape lock while in fullscreen on phones. Supported on
+  // Android Chrome; iOS Safari throws (its native fullscreen auto-rotates
+  // anyway), so every call is guarded.
+  function lockLandscape() {
+    try { void (screen.orientation as any)?.lock?.('landscape').catch(() => {}) } catch {}
+  }
+  function unlockOrientation() {
+    try { (screen.orientation as any)?.unlock?.() } catch {}
   }
 
   async function toggleFullscreen() {
@@ -511,10 +687,12 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       if (document.fullscreenElement) await document.exitFullscreen()
       else if (webkitDocument.webkitExitFullscreen) await webkitDocument.webkitExitFullscreen()
       else video?.webkitExitFullscreen?.()
+      unlockOrientation()
       setFullscreen(false)
     } else {
       if (container.requestFullscreen) await container.requestFullscreen()
       else video?.webkitEnterFullscreen?.()
+      lockLandscape()
       setFullscreen(true)
     }
   }
@@ -541,13 +719,27 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
     } catch {}
   }
 
-  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Click + drag scrubbing on the seek bar via pointer capture.
+  const scrubbingRef = useRef(false)
+  const seekToClientX = (clientX: number, el: HTMLElement) => {
     const video = videoRef.current
     // duration is NaN until metadata loads; assigning NaN to currentTime throws.
     if (!video || !Number.isFinite(video.duration)) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const pct = (e.clientX - rect.left) / rect.width
+    const rect = el.getBoundingClientRect()
+    const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
     video.currentTime = pct * video.duration
+  }
+  const seekPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    scrubbingRef.current = true
+    e.currentTarget.setPointerCapture(e.pointerId)
+    seekToClientX(e.clientX, e.currentTarget)
+  }
+  const seekPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (scrubbingRef.current) seekToClientX(e.clientX, e.currentTarget)
+  }
+  const seekPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    scrubbingRef.current = false
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch {}
   }
 
   const seekWithKeyboard = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -633,7 +825,8 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       <video
         ref={videoRef}
         className="h-full w-full object-contain"
-        onClick={togglePlay}
+        onClick={handleVideoClick}
+        onTouchStart={handleVideoTouchStart}
         playsInline
         crossOrigin="anonymous"
       />
@@ -705,33 +898,48 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
             if (videoRef.current) videoRef.current.currentTime = activeSegment.end_sec
             setActiveSegment(null)
           }}
-          className="absolute bottom-24 right-6 z-30 px-5 py-2 rounded-md bg-background/80 backdrop-blur-sm border border-border text-sm font-medium text-foreground hover:bg-background transition-all duration-150 animate-in fade-in slide-in-from-bottom-2 duration-200"
+          className="absolute bottom-24 right-6 z-30 px-5 py-2 rounded-md bg-background/80 backdrop-blur-sm border border-border text-sm font-medium text-foreground hover:bg-background transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
           aria-label={t(`controls.skip_${activeSegment.segment_type}`)}
         >
           {t(`controls.skip_${activeSegment.segment_type}`)}
         </button>
       )}
 
+      {/* Center play flash — shown whenever paused (independent of chrome), a
+          soft cue that a click resumes. Pointer-events pass through to the video. */}
+      {!playing && !loading && !error && !showAutoplay && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/25">
+          <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-black/50 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+            <Play className="ml-1 h-9 w-9 fill-white text-white" />
+          </div>
+        </div>
+      )}
+
       {/* Controls overlay */}
       {showControls && !error && (
-        <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/20 via-transparent to-black/15">
-          {/* Top bar — title */}
-          <div className="absolute top-0 left-0 right-0 p-4">
-            <h1 className="text-white text-lg font-medium line-clamp-1">
+        <div className="pointer-events-none absolute inset-0 z-10">
+          {/* Top bar — gradient + kicker + title. pl-16 clears the absolute back
+              button (top-4 left-4) so the title never renders underneath it. */}
+          <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-6 pl-16">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-white/60">
+              {type === 'tv' && season !== undefined && episode !== undefined
+                ? `S${season} : E${episode}`
+                : t(type === 'movie' ? 'controls.movie' : 'controls.series')}
+            </p>
+            <h1 className="mt-0.5 line-clamp-1 text-lg font-bold text-white">
               {title}
-              {type === 'tv' && season !== undefined && episode !== undefined && (
-                <span className="text-white/60 ml-2">S{season} E{episode}</span>
-              )}
             </h1>
           </div>
 
           {/* Bottom controls */}
-          <div className="pointer-events-auto absolute bottom-0 left-0 right-0 p-4 space-y-2">
+          <div className="pointer-events-auto absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-6 pb-6 pt-10 space-y-2.5">
             {/* Seek bar */}
             <div
-              onClick={seek}
+              onPointerDown={seekPointerDown}
+              onPointerMove={seekPointerMove}
+              onPointerUp={seekPointerUp}
               onKeyDown={seekWithKeyboard}
-              className="group relative h-1.5 w-full cursor-pointer rounded-full bg-white/20 transition-all hover:h-2.5"
+              className="group relative flex h-4 w-full cursor-pointer touch-none select-none items-center"
               role="slider"
               tabIndex={0}
               aria-label="Seek"
@@ -740,17 +948,45 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
               aria-valuenow={Math.round(currentTime)}
               aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
             >
-              <div
-                className="absolute inset-y-0 left-0 rounded-full bg-primary"
-                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-              />
+              <div className="relative h-[5px] w-full rounded-full bg-white/25">
+                {/* Buffered range */}
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-white/30"
+                  style={{ width: `${buffered * 100}%` }}
+                />
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-primary"
+                  style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                />
+                {/* Knob with accent glow (handoff spec) */}
+                <div
+                  className="pointer-events-none absolute top-1/2 h-[15px] w-[15px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_30%,transparent)]"
+                  style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
             </div>
 
             {/* Control buttons */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button onClick={togglePlay} className="text-white hover:bg-white/20 rounded-full p-1.5 transition-colors" aria-label={playing ? 'Pause' : 'Play'} aria-pressed={playing}>
-                  {playing ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 fill-current" />}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.max(0, v.currentTime - 10) }}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+                  aria-label={t('controls.back_10s')}
+                >
+                  <RotateCcw className="h-[21px] w-[21px]" />
+                </button>
+
+                <button onClick={togglePlay} className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:brightness-110" aria-label={playing ? t('controls.pause') : t('controls.play')} aria-pressed={playing}>
+                  {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
+                </button>
+
+                <button
+                  onClick={() => { const v = videoRef.current; if (v) v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10) }}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+                  aria-label={t('controls.forward_10s')}
+                >
+                  <RotateCw className="h-[21px] w-[21px]" />
                 </button>
 
                 {type === 'tv' && (
@@ -787,7 +1023,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                     const v = parseFloat(e.target.value)
                     if (videoRef.current) { videoRef.current.volume = v; videoRef.current.muted = v === 0 }
                   }}
-                  className="w-20 accent-primary"
+                  // Hidden on phones (hardware volume handles it) so the cramped
+                  // control bar has room for the time + right-side buttons.
+                  className="hidden sm:block w-20 accent-primary"
                   aria-label="Volume"
                   aria-valuemin={0}
                   aria-valuemax={100}
@@ -812,10 +1050,110 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   </button>
                 )}
 
-                {/* Settings popover */}
-                <div className="relative">
+                {/* Source selector */}
+                <div className="relative" ref={sourcePopoverRef}>
                   <button
-                    onClick={() => setShowSettings(!showSettings)}
+                    onClick={(e) => { e.stopPropagation(); setSourcesOpen(!sourcesOpen) }}
+                    className={cn(
+                      'flex items-center gap-2 h-9 rounded-full px-3 text-[13px] font-bold text-white transition-colors border',
+                      sourcesOpen
+                        ? 'bg-white/20'
+                        : 'bg-white/10 border-transparent hover:bg-white/20',
+                    )}
+                    style={sourcesOpen ? { borderColor: 'color-mix(in srgb, var(--accent) 60%, transparent)' } : undefined}
+                    aria-label="Select source"
+                    aria-haspopup="true"
+                    aria-expanded={sourcesOpen}
+                  >
+                    <Server className="h-[17px] w-[17px]" />
+                    <span className="truncate max-w-[100px]">{selectedSource?.provider?.name ?? 'Source'}</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="transition-transform duration-200"
+                      style={{ transform: sourcesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    >
+                      <path d="m6 9 6 6 6-6"></path>
+                    </svg>
+                  </button>
+
+                  {sourcesOpen && (
+                    <div
+                      className="absolute right-0 bottom-[calc(100%+12px)] w-[320px] rounded-2xl border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
+                      style={{ background: 'rgba(20,20,20,0.98)' }}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-[14px] border-b border-white/7">
+                        <span className="text-[14px] font-extrabold text-white">Select Source</span>
+                        <span className="text-[11px] font-semibold text-[#8f8f8f]">{sources.length} servers</span>
+                      </div>
+
+                      {/* Scrollable list */}
+                      <div className="max-h-[280px] overflow-y-auto">
+                        {sources.length === 0 ? (
+                          <div className="px-4 py-3 text-xs text-white/40">No sources available</div>
+                        ) : (
+                          sources.map((src, i) => {
+                            const isSelected = selectedSource === src
+                            const isRecommended = i === 0 && !manualSourceRef.current
+                            const qualityLabel = /^\d+$/.test(src.quality) ? `${src.quality}p` : src.quality === 'auto' ? 'Auto' : src.quality
+                            const tier = src.provider?.id === 'vidnest' ? 'fast' : src.provider?.id === 'vidsrc' ? 'fast' : src.provider?.id === 'vidlink' ? 'fast' : src.provider?.id === 'icefy' ? 'med' : 'slow'
+                            const pingLabel = tier === 'fast' ? 'Fast' : tier === 'med' ? 'Medium' : 'Slow'
+                            const pingColor = tier === 'fast' ? '#12b981' : tier === 'med' ? '#eda000' : '#e05555'
+                            return (
+                              <button
+                                key={src.url}
+                                onClick={() => { manualSourceRef.current = true; setError(null); setSelectedSource(src); setSourcesOpen(false) }}
+                                className={cn(
+                                  'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/6',
+                                  isSelected && 'bg-accent/12',
+                                )}
+                              >
+                                <span className={cn(
+                                  'flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px]',
+                                  isSelected ? 'bg-accent' : 'bg-white/10',
+                                )}>
+                                  <Monitor className="h-[17px] w-[17px] text-white" />
+                                </span>
+                                <span className="flex-1 min-w-0">
+                                  <span className="flex items-center gap-[7px]">
+                                    <span className="text-[14px] font-bold text-[#f0f0f0]">{src.provider?.name ?? `Source ${i + 1}`}</span>
+                                    {isRecommended && (
+                                      <span className="rounded-[5px] text-[9px] font-extrabold tracking-[0.05em] uppercase text-white px-[6px] py-[1px]"
+                                        style={{ background: 'color-mix(in srgb, var(--accent) 22%, transparent)' }}
+                                      >
+                                        Best
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="flex items-center gap-2 mt-[3px]">
+                                    <span className="text-[11px] font-semibold text-[#8f8f8f]">{src.type === 'hls' ? 'Auto' : qualityLabel}</span>
+                                    <span className="inline-flex items-center gap-[4px] text-[11px]" style={{ color: pingColor }}>
+                                      <span className="w-[6px] h-[6px] rounded-full" style={{ background: pingColor }}></span>
+                                      {pingLabel}
+                                    </span>
+                                  </span>
+                                </span>
+                                {isSelected && <Check className="h-[18px] w-[18px] shrink-0" style={{ stroke: 'var(--accent)' }} strokeWidth={2.6} />}
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Settings popover */}
+                <div className="relative" ref={settingsRef}>
+                  <button
+                    onClick={() => { setSourcesOpen(false); setShowSettings(!showSettings) }}
                     className="text-white/70 hover:text-white"
                     aria-label="Settings"
                     aria-haspopup="true"
@@ -825,9 +1163,10 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   </button>
 
                   {showSettings && (
-                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-black/90 backdrop-blur-xl border border-white/10 shadow-xl max-h-[70vh] flex flex-col" role="menu">
-                      {/* Tab bar */}
-                      <div className="flex border-b border-white/10">
+                    <div className="absolute bottom-full right-0 mb-2 w-72 rounded-lg bg-black/90 backdrop-blur-xl border border-white/10 shadow-xl max-h-[70vh] flex flex-col">
+                      {/* Tab bar — a real tablist: it switches panels below, it is
+                          not a menu of actions. */}
+                      <div className="flex border-b border-white/10" role="tablist" aria-label="Player settings">
                         {([
                           { id: 'source' as SettingsTab, icon: HardDrive },
                           { id: 'subtitles' as SettingsTab, icon: Captions },
@@ -838,22 +1177,24 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                         ]).map(({ id, icon: Icon }) => (
                           <button
                             key={id}
+                            role="tab"
+                            aria-selected={settingsTab === id}
                             onClick={() => setSettingsTab(id)}
                             className={cn(
-                              'flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
+                              'flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors capitalize',
                               settingsTab === id
                                 ? 'text-white bg-white/10'
                                 : 'text-white/50 hover:text-white/80',
                             )}
                           >
                             <Icon className="h-3.5 w-3.5" />
-                            {id === 'captions' ? 'Style' : id}
+                            {t(`settings.${id === 'captions' ? 'style' : id}`)}
                           </button>
                         ))}
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 overflow-y-auto p-2 min-h-0 max-h-64">
+                      <div className="flex-1 overflow-y-auto p-2 min-h-0 max-h-64" role="tabpanel">
                         {/* Source */}
                         {settingsTab === 'source' && (
                           <div className="space-y-1">
@@ -873,20 +1214,25 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                     <div className="mt-0.5 space-y-0.5">
                                       {providerSources.map((s, i) => {
                                         const isSelected = selectedSource === s
+                                        const langs = sourceLanguages(s.audioTracks)
+                                        // Providers report quality inconsistently ("1080" vs
+                                        // "1080p" vs "Auto") — normalize bare numbers for display.
+                                        const qualityLabel = /^\d+$/.test(s.quality) ? `${s.quality}p` : s.quality
                                         return (
                                           <button
                                             key={`${s.provider.id}-${i}`}
-                                            onClick={() => { setSelectedSource(s); setShowSettings(false) }}
+                                            onClick={() => { manualSourceRef.current = true; setError(null); setSelectedSource(s); setShowSettings(false) }}
                                             className={cn(
-                                              'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                                              'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
                                               isSelected ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                                             )}
                                           >
-                                            <span>
-                                              <span className="font-medium">Source {i + 1}</span>
-                                              <span className="ml-1.5 text-white/40">{s.quality}</span>
+                                            <span className="flex min-w-0 items-center gap-1.5">
+                                              <span className="truncate font-medium">{langs || `Source ${i + 1}`}</span>
+                                              <span className="shrink-0 text-white/40">{qualityLabel}</span>
+                                              <span className="shrink-0 text-[10px] uppercase tracking-wide text-white/30">{s.type}</span>
                                             </span>
-                                            {isSelected && <Check className="h-3 w-3" />}
+                                            {isSelected && <Check className="h-3 w-3 shrink-0" />}
                                           </button>
                                         )
                                       })}
@@ -908,7 +1254,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                 !selectedSubtitle ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                               )}
                             >
-                              <span>Off</span>
+                              <span>{t('settings.off')}</span>
                               {!selectedSubtitle && <Check className="h-3 w-3" />}
                             </button>
                             {subtitles.length === 0 ? (
@@ -932,30 +1278,43 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                         )}
 
                         {/* Audio */}
-                        {settingsTab === 'audio' && (
-                          <div className="space-y-0.5">
-                            {audioTracks.length === 0 ? (
-                              <p className="text-xs text-white/40 px-2 py-1">No audio tracks available</p>
-                            ) : (
-                              audioTracks.map((track, i) => {
-                                const isSelected = selectedAudioTrack?.label === track.label && selectedAudioTrack?.language === track.language
-                                return (
-                                  <button
-                                    key={i}
-                                    onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
-                                    className={cn(
-                                      'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
-                                      isSelected ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
-                                    )}
-                                  >
-                                    <span>{track.label || track.language}</span>
-                                    {isSelected && <Check className="h-3 w-3" />}
-                                  </button>
-                                )
-                              })
-                            )}
-                          </div>
-                        )}
+                        {settingsTab === 'audio' && (() => {
+                          // Track switching only works through hls.js — for mp4/mkv
+                          // (or native HLS) the embedded tracks can't be changed, so
+                          // show them as informational instead of pretending.
+                          const canSwitchAudio = selectedSource != null && isHls(selectedSource) && Hls.isSupported()
+                          return (
+                            <div className="space-y-0.5">
+                              {audioTracks.length === 0 ? (
+                                <p className="text-xs text-white/40 px-2 py-1">{t('settings.no_audio_tracks')}</p>
+                              ) : (
+                                <>
+                                  {!canSwitchAudio && audioTracks.length > 1 && (
+                                    <p className="text-[10px] text-white/40 px-2 py-1">{t('settings.audio_locked')}</p>
+                                  )}
+                                  {audioTracks.map((track, i) => {
+                                    const isSelected = selectedAudioTrack?.label === track.label && selectedAudioTrack?.language === track.language
+                                    return (
+                                      <button
+                                        key={i}
+                                        disabled={!canSwitchAudio}
+                                        onClick={() => { setSelectedAudioTrack(track); setShowSettings(false) }}
+                                        className={cn(
+                                          'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                                          isSelected ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
+                                          !canSwitchAudio && 'opacity-50 cursor-default hover:bg-transparent',
+                                        )}
+                                      >
+                                        <span>{languageName(track.language, track.label)}</span>
+                                        {isSelected && <Check className="h-3 w-3" />}
+                                      </button>
+                                    )
+                                  })}
+                                </>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         {/* Quality */}
                         {settingsTab === 'quality' && (
@@ -967,7 +1326,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                 currentQuality === -1 ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
                               )}
                             >
-                              <span>Auto</span>
+                              <span>{t('settings.auto')}</span>
                               {currentQuality === -1 && <Check className="h-3 w-3" />}
                             </button>
                             {qualities.map(q => (
@@ -1081,11 +1440,20 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                   )}
                 </div>
 
+                {/* Quick speed cycle */}
+                <button
+                  onClick={() => { const s = [0.5, 1, 1.25, 1.5, 2]; const i = s.indexOf(playbackRate); setPlaybackRate(s[(i + 1) % s.length] ?? 1) }}
+                  className="h-9 rounded-full bg-white/10 px-3 text-[13px] font-bold tabular-nums text-white transition-colors hover:bg-white/20"
+                  aria-label={t('controls.speed')}
+                >
+                  {playbackRate}×
+                </button>
+
                 {/* Picture in Picture */}
                 <button
                   onClick={togglePiP}
                   className="text-white/70 hover:text-white"
-                  aria-label={isPiP ? 'Exit Picture in Picture' : 'Picture in Picture'}
+                  aria-label={isPiP ? t('controls.exit_picture_in_picture') : t('controls.picture_in_picture')}
                   aria-pressed={isPiP}
                 >
                   {isPiP ? <PictureInPicture2 className="h-4 w-4" /> : <PictureInPicture className="h-4 w-4" />}

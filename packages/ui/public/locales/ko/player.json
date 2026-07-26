@@ -1,0 +1,61 @@
+{
+  "controls": {
+    "play": "재생",
+    "pause": "일시정지",
+    "mute": "음소거",
+    "unmute": "음소거 해제",
+    "fullscreen": "전체 화면",
+    "exit_fullscreen": "전체 화면 종료",
+    "picture_in_picture": "PIP 모드",
+    "exit_picture_in_picture": "PIP 모드 종료",
+    "settings": "설정",
+    "subtitles": "자막",
+    "audio": "오디오",
+    "quality": "화질",
+    "speed": "속도",
+    "style": "스타일",
+    "episodes": "에피소드",
+    "previous_episode": "이전 에피소드",
+    "next_episode": "다음 에피소드",
+    "go_back": "뒤로",
+    "play_next": "다음 재생",
+    "cancel": "취소",
+    "seek": "탐색",
+    "volume": "볼륨",
+    "skip_intro": "인트로 건너뛰기",
+    "skip_recap": "요약 건너뛰기",
+    "skip_outro": "아웃트로 건너뛰기",
+    "skip_credits": "크레딧 건너뛰기",
+    "skip_preview": "예고편 건너뛰기"
+  },
+  "settings": {
+    "source": "소스",
+    "auto": "자동",
+    "off": "끄기",
+    "no_sources": "소스 없음",
+    "no_audio_tracks": "사용 가능한 오디오 트랙 없음",
+    "audio_locked": "이 소스에서는 오디오를 전환할 수 없습니다 — 다른 소스를 선택하세요",
+    "no_subtitles": "사용 가능한 자막 없음",
+    "font_size": "글자 크기",
+    "color": "색상",
+    "background": "배경",
+    "position": "위치",
+    "small": "작게",
+    "medium": "보통",
+    "large": "크게",
+    "xlarge": "아주 크게",
+    "none": "없음",
+    "low": "낮음",
+    "high": "높음",
+    "bottom": "아래",
+    "top": "위"
+  },
+  "errors": {
+    "no_sources": "사용 가능한 소스가 없습니다",
+    "playback_error": "재생 오류 — 다른 소스를 시도해 보세요",
+    "source_load_failed": "소스 로드 오류"
+  },
+  "states": {
+    "next_episode_soon": "곧 다음 에피소드가 시작됩니다…"
+  }
+}

@@ -2,6 +2,10 @@
   "controls": {
     "play": "Play",
     "pause": "Pause",
+    "back_10s": "Back 10 seconds",
+    "forward_10s": "Forward 10 seconds",
+    "movie": "Movie",
+    "series": "Series",
     "mute": "Mute",
     "unmute": "Unmute",
     "fullscreen": "Enter fullscreen",
@@ -34,6 +38,7 @@
     "off": "Off",
     "no_sources": "No sources",
     "no_audio_tracks": "No audio tracks available",
+    "audio_locked": "Audio can't be switched for this source — pick a different source instead",
     "no_subtitles": "No subtitles available",
     "font_size": "Font Size",
     "color": "Color",

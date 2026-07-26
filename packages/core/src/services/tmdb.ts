@@ -100,17 +100,40 @@ class TmdbService {
       url.searchParams.set(k, v)
     }
 
-    const res = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(10_000),
-    })
+    // TMDB serves over HTTP/2 and periodically sends GOAWAY to drain pooled
+    // connections; Node's fetch can reuse a closing one and throw
+    // "fetch failed", which otherwise surfaced to the user as a random
+    // "Couldn't load details" / empty rail. Retry transient failures (network
+    // error or 5xx) a couple of times with light backoff before giving up.
+    // 4xx (bad request / not found) is returned immediately — retrying is
+    // pointless there.
+    const maxAttempts = 3
+    let lastErr: unknown
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let res: Response
+      try {
+        res = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000) })
+      } catch (err) {
+        // Network error / GOAWAY / our own timeout → retry.
+        lastErr = err
+        if (attempt === maxAttempts) break
+        await new Promise(resolve => setTimeout(resolve, 150 * attempt))
+        continue
+      }
 
-    if (!res.ok) {
-      throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+      if (res.ok) {
+        const data = await res.json() as T
+        tmdbCache.set(cacheKey, data, env.tmdb.cacheTtl)
+        return data
+      }
+
+      const httpErr = new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+      if (res.status < 500) throw httpErr // 4xx is deterministic — don't retry
+      lastErr = httpErr // 5xx → retry
+      if (attempt === maxAttempts) break
+      await new Promise(resolve => setTimeout(resolve, 150 * attempt))
     }
-
-    const data = await res.json() as T
-    tmdbCache.set(cacheKey, data, env.tmdb.cacheTtl)
-    return data
+    throw lastErr instanceof Error ? lastErr : new Error('TMDB request failed')
   }
 
   /** Get trending movies */
@@ -191,6 +214,12 @@ class TmdbService {
       page: String(options.page || 1),
       sort_by: sortByForType(type, options.sortBy || 'popularity.desc'),
       language: options.language || 'en-US',
+    }
+
+    // Without a vote floor, vote_average sorts return obscure titles with a
+    // single 10/10 vote — junk for both Discover's Rating sort and Surprise.
+    if (params.sort_by.startsWith('vote_average')) {
+      params['vote_count.gte'] = '200'
     }
 
     if (options.genreId) params.with_genres = String(options.genreId)

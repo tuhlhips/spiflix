@@ -1,10 +1,15 @@
 import { createContext, useContext, useCallback, type ReactNode } from 'react'
 import { usePersistentState } from '@/hooks/useLocalStorage'
 
-interface HistoryItem {
+export interface HistoryItem {
   id: number
   type: 'movie' | 'tv'
   title: string
+  /** Poster art, so the Continue Watching rail renders without refetching. */
+  posterPath?: string | null
+  /** Last-watched position for TV — lets history/drawer resume the right episode. */
+  season?: number
+  episode?: number
   currentTime: number
   duration: number
   updated: number

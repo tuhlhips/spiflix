@@ -56,8 +56,8 @@ export async function tmdbRoutes(app: FastifyInstance) {
         : await tmdb.trendingTv('week', getLang(request))
       return results
     } catch (err: any) {
-      console.error('[TMDB] trending error:', err.message, err.stack)
-      return reply.code(500).send({ error: 'TMDB trending failed', detail: err.message })
+      request.log.error(err, 'TMDB trending failed')
+      return reply.code(500).send({ error: 'TMDB trending failed' })
     }
   })
 

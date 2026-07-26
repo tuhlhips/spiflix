@@ -1,0 +1,146 @@
+{
+  "app": {
+    "name": "Spiflix",
+    "tagline": "Filme und Serien streamen"
+  },
+  "nav": {
+    "home": "Start",
+    "movies": "Filme",
+    "shows": "Serien",
+    "discover": "Entdecken",
+    "settings": "Einstellungen"
+  },
+  "header": {
+    "connected": "Backend verbunden",
+    "disconnected": "Backend getrennt",
+    "search": "Suchen"
+  },
+  "search": {
+    "placeholder": "Filme und Serien suchen …",
+    "typeHint": "Gib mindestens 2 Zeichen ein",
+    "noResults": "Keine Ergebnisse gefunden",
+    "all": "Alle",
+    "movies": "Filme",
+    "tv": "Serien",
+    "results": "Ergebnisse"
+  },
+  "home": {
+    "trendingMovies": "Angesagte Filme",
+    "trendingTv": "Angesagte Serien",
+    "popularMovies": "Beliebte Filme",
+    "popularTv": "Beliebte Serien",
+    "topRated": "Bestbewertet"
+  },
+  "media": {
+    "trendingNow": "Jetzt im Trend",
+    "popular": "Beliebt",
+    "topRated": "Bestbewertet",
+    "watchNow": "Jetzt ansehen",
+    "moreInfo": "Mehr Infos",
+    "noImage": "Kein Bild"
+  },
+  "drawer": {
+    "play": "Abspielen",
+    "trailer": "Trailer",
+    "episodes": "Folgen",
+    "cast": "Besetzung",
+    "recommendations": "Empfehlungen",
+    "noImage": "Kein Bild",
+    "noOverview": "Keine Beschreibung",
+    "grid": "Raster",
+    "list": "Liste",
+    "loadError": "Details für diesen Titel konnten nicht geladen werden.",
+    "tryAgain": "Erneut versuchen"
+  },
+  "discover": {
+    "title": "Entdecken",
+    "surpriseMe": "Überrasch mich",
+    "sortBy": "Sortieren nach",
+    "order": "Reihenfolge",
+    "yearFrom": "Jahr von",
+    "yearTo": "Jahr bis",
+    "any": "Beliebig",
+    "all": "Alle",
+    "movies": "Filme",
+    "tvShows": "Serien",
+    "noResults": "Keine Ergebnisse gefunden",
+    "noResultsHint": "Passe deine Filter an",
+    "loadError": "Ergebnisse konnten nicht geladen werden. Möglicherweise ein vorübergehendes Problem mit dem Server oder TMDB – bitte versuche es erneut.",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "page": "Seite",
+    "goToPage": "Zur Seite",
+    "go": "Los",
+    "sort": {
+      "popularity": "Beliebtheit",
+      "rating": "Bewertung",
+      "releaseDate": "Erscheinungsdatum",
+      "title": "Titel"
+    },
+    "dir": {
+      "highest": "Höchste zuerst",
+      "lowest": "Niedrigste zuerst",
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst",
+      "az": "A–Z",
+      "za": "Z–A"
+    }
+  },
+  "surprise": {
+    "title": "Überrasch mich",
+    "subtitle": "Ein wirklich zufälliger Film oder eine Serie, ausgewählt aus einer breiten Palette von Genres und Epochen.",
+    "finding": "Wir suchen etwas für dich …",
+    "moviePick": "Film-Tipp",
+    "tvPick": "Serien-Tipp",
+    "watchNow": "Jetzt ansehen",
+    "another": "Noch eins",
+    "copyId": "ID kopieren",
+    "copied": "Kopiert",
+    "backToDiscover": "Zurück zu Entdecken",
+    "noPoster": "Kein Poster verfügbar",
+    "noDescription": "Für diesen Titel ist keine Beschreibung verfügbar.",
+    "votes": "Stimmen",
+    "errorNone": "Es waren keine Empfehlungen verfügbar. Versuche es erneut für einen neuen Vorschlag.",
+    "errorGeneric": "Derzeit ist keine Empfehlung möglich. Bitte versuche es erneut.",
+    "errorCopy": "Die ID konnte nicht kopiert werden. Bitte kopiere sie manuell."
+  },
+  "episodes": {
+    "title": "Folgen",
+    "newestFirst": "Neueste zuerst",
+    "oldestFirst": "Älteste zuerst",
+    "none": "Keine Folgen gefunden",
+    "noOverview": "Keine Beschreibung",
+    "season": "Staffel"
+  },
+  "notFound": {
+    "code": "404",
+    "message": "Seite nicht gefunden",
+    "home": "Zurück zur Startseite"
+  },
+  "common": {
+    "loading": "Wird geladen …",
+    "error": "Etwas ist schiefgelaufen",
+    "reload": "Seite neu laden",
+    "retry": "Erneut versuchen"
+  },
+  "footer": {
+    "pages": "Seiten",
+    "links": "Links",
+    "disclaimer": "Haftungsausschluss",
+    "copyright": "Diese Website hostet keine urheberrechtlich geschützten Inhalte.",
+    "streamMovies": "Filme und Serien streamen"
+  },
+  "disclaimer": {
+    "title": "Haftungsausschluss",
+    "goBack": "Zurück",
+    "p1": "Spiflix hostet keine urheberrechtlich geschützten Inhalte auf seinen Servern. Alle auf dieser Website angezeigten Medieninhalte stammen von Drittanbietern und werden über öffentlich verfügbare Streaming-Links eingebettet.",
+    "p2": "Diese Website ist ausschließlich für Bildungs- und persönliche Zwecke bestimmt. Wir ermutigen oder dulden weder Piraterie noch die unbefugte Verbreitung urheberrechtlich geschützten Materials.",
+    "p3": "Alle Marken, Logos und Markennamen sind Eigentum ihrer jeweiligen Inhaber. Die Verwendung dieser Namen impliziert keine Befürwortung oder Zugehörigkeit.",
+    "p4": "Wenn du der Ansicht bist, dass über diese Website verfügbare Inhalte dein Urheberrecht verletzen, wende dich bitte direkt an den jeweiligen Content-Host.",
+    "p5": "Dieser Dienst wird „wie besehen“ ohne jegliche ausdrückliche oder stillschweigende Gewährleistung bereitgestellt. Die Betreiber dieser Website haften nicht für Schäden, die aus der Nutzung dieses Dienstes entstehen."
+  },
+  "error": {
+    "title": "Etwas ist schiefgelaufen",
+    "reload": "Seite neu laden"
+  }
+}

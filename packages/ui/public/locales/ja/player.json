@@ -1,0 +1,61 @@
+{
+  "controls": {
+    "play": "再生",
+    "pause": "一時停止",
+    "mute": "ミュート",
+    "unmute": "ミュート解除",
+    "fullscreen": "全画面",
+    "exit_fullscreen": "全画面を終了",
+    "picture_in_picture": "ピクチャー・イン・ピクチャー",
+    "exit_picture_in_picture": "ピクチャー・イン・ピクチャーを終了",
+    "settings": "設定",
+    "subtitles": "字幕",
+    "audio": "音声",
+    "quality": "画質",
+    "speed": "速度",
+    "style": "スタイル",
+    "episodes": "エピソード",
+    "previous_episode": "前のエピソード",
+    "next_episode": "次のエピソード",
+    "go_back": "戻る",
+    "play_next": "次を再生",
+    "cancel": "キャンセル",
+    "seek": "シーク",
+    "volume": "音量",
+    "skip_intro": "イントロをスキップ",
+    "skip_recap": "あらすじをスキップ",
+    "skip_outro": "アウトロをスキップ",
+    "skip_credits": "クレジットをスキップ",
+    "skip_preview": "予告をスキップ"
+  },
+  "settings": {
+    "source": "ソース",
+    "auto": "自動",
+    "off": "オフ",
+    "no_sources": "ソースがありません",
+    "no_audio_tracks": "利用できる音声トラックがありません",
+    "audio_locked": "このソースでは音声を切り替えられません — 別のソースを選択してください",
+    "no_subtitles": "利用できる字幕がありません",
+    "font_size": "文字サイズ",
+    "color": "色",
+    "background": "背景",
+    "position": "位置",
+    "small": "小",
+    "medium": "中",
+    "large": "大",
+    "xlarge": "特大",
+    "none": "なし",
+    "low": "低",
+    "high": "高",
+    "bottom": "下",
+    "top": "上"
+  },
+  "errors": {
+    "no_sources": "利用できるソースがありません",
+    "playback_error": "再生エラー — 別のソースをお試しください",
+    "source_load_failed": "ソースの読み込みエラー"
+  },
+  "states": {
+    "next_episode_soon": "まもなく次のエピソードが始まります…"
+  }
+}

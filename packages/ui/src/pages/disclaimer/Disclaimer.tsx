@@ -7,7 +7,7 @@ export default function Disclaimer() {
   const goBack = useSafeBack('/')
 
   return (
-    <div className="mx-auto max-w-2xl py-12 px-4 sm:px-6">
+    <div className="mx-auto max-w-2xl px-4 sm:px-6 pb-12 pt-20 sm:pt-12">
       <button onClick={goBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" />
         {t('disclaimer.goBack')}

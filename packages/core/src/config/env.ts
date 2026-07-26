@@ -14,14 +14,6 @@ function optionalEnv(key: string, fallback: string): string {
   return process.env[key] || fallback
 }
 
-function requiredInProduction(key: string): string[] {
-  const values = optionalEnv(key, '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)
-  if (optionalEnv('NODE_ENV', 'development') === 'production' && values.length === 0) {
-    throw new Error(`Missing required production env: ${key}`)
-  }
-  return values
-}
-
 export const env = {
   port: Number(optionalEnv('PORT', '3000')),
   host: optionalEnv('HOST', 'localhost'),
@@ -46,7 +38,10 @@ export const env = {
     // clear it once that window has elapsed. Comma-separated to allow more than
     // one overlapping rotation. Normally empty.
     previousSigningSecrets: optionalEnv('PROXY_SIGNING_SECRET_PREVIOUS', '').split(',').map(value => value.trim()).filter(Boolean),
-    allowedHosts: requiredInProduction('PROXY_ALLOWED_HOSTS'),
+    // Optional now that the proxy has an SSRF guard (blocks internal addresses
+    // at request time). When set, it's an additional allowlist on top; when
+    // blank, any public host is proxied. See services/proxy.ts.
+    allowedHosts: optionalEnv('PROXY_ALLOWED_HOSTS', '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean),
     tokenTtlSeconds: Number(optionalEnv('PROXY_TOKEN_TTL_SECONDS', '14400')),
   },
 

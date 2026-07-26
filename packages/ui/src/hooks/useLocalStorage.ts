@@ -29,7 +29,14 @@ export function usePersistentState<T>(key: string, initialValue: T): [T, (value:
 
   useEffect(() => {
     try {
-      localStorage.setItem(key, JSON.stringify(state))
+      // null/undefined mean "no value" — remove the key instead of persisting
+      // the string "null" (which previously polluted localStorage with an
+      // entry for every title merely opened, and made clear() store garbage).
+      if (state === null || state === undefined) {
+        localStorage.removeItem(key)
+      } else {
+        localStorage.setItem(key, JSON.stringify(state))
+      }
     } catch {
       // Quota exceeded or private browsing — silently ignore
     }

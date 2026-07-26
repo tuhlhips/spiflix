@@ -55,28 +55,3 @@ export type DiagnosticCode =
   | 'TIMEOUT'
   | 'RATE_LIMITED'
   | 'BLOCKED'
-
-/** Normalized source for the player */
-export interface NormalizedSource {
-  url: string
-  type: SourceType
-  quality: string
-  provider: ProviderRef
-  audioTracks: AudioTrack[]
-  preferred: boolean
-}
-
-/** Playback bundle — all data the player needs */
-export interface PlaybackBundle {
-  sources: NormalizedSource[]
-  subtitles: NormalizedSubtitle[]
-  selectedSource: NormalizedSource | null
-  selectedSubtitle: NormalizedSubtitle | null
-}
-
-/** Normalized subtitle for the player */
-export interface NormalizedSubtitle {
-  url: string
-  label: string
-  format: SubtitleFormat
-}

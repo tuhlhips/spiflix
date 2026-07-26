@@ -41,8 +41,9 @@ export class ProviderRegistry {
     console.log(`[Registry] ${this.providers.size} providers active`)
   }
 
-  /** Manually register a provider */
+  /** Manually register a provider (Worker path). Respects `enabled` like discover(). */
   register(provider: BaseProvider): void {
+    if (!provider.config.enabled) return
     this.providers.set(provider.config.id, provider)
   }
 

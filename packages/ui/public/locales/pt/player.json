@@ -1,0 +1,61 @@
+{
+  "controls": {
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "mute": "Silenciar",
+    "unmute": "Ativar som",
+    "fullscreen": "Tela cheia",
+    "exit_fullscreen": "Sair da tela cheia",
+    "picture_in_picture": "Picture in Picture",
+    "exit_picture_in_picture": "Sair do Picture in Picture",
+    "settings": "Configurações",
+    "subtitles": "Legendas",
+    "audio": "Áudio",
+    "quality": "Qualidade",
+    "speed": "Velocidade",
+    "style": "Estilo",
+    "episodes": "Episódios",
+    "previous_episode": "Episódio anterior",
+    "next_episode": "Próximo episódio",
+    "go_back": "Voltar",
+    "play_next": "Reproduzir próximo",
+    "cancel": "Cancelar",
+    "seek": "Buscar",
+    "volume": "Volume",
+    "skip_intro": "Pular introdução",
+    "skip_recap": "Pular recapitulação",
+    "skip_outro": "Pular encerramento",
+    "skip_credits": "Pular créditos",
+    "skip_preview": "Pular prévia"
+  },
+  "settings": {
+    "source": "Fonte",
+    "auto": "Auto",
+    "off": "Desligado",
+    "no_sources": "Nenhuma fonte",
+    "no_audio_tracks": "Nenhuma faixa de áudio disponível",
+    "audio_locked": "O áudio não pode ser alterado nesta fonte — escolha outra fonte",
+    "no_subtitles": "Nenhuma legenda disponível",
+    "font_size": "Tamanho da fonte",
+    "color": "Cor",
+    "background": "Fundo",
+    "position": "Posição",
+    "small": "Pequeno",
+    "medium": "Médio",
+    "large": "Grande",
+    "xlarge": "Muito grande",
+    "none": "Nenhum",
+    "low": "Baixo",
+    "high": "Alto",
+    "bottom": "Embaixo",
+    "top": "Em cima"
+  },
+  "errors": {
+    "no_sources": "Nenhuma fonte disponível",
+    "playback_error": "Erro de reprodução — tente outra fonte",
+    "source_load_failed": "Erro ao carregar a fonte"
+  },
+  "states": {
+    "next_episode_soon": "O próximo episódio começa em breve…"
+  }
+}

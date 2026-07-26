@@ -1,0 +1,61 @@
+{
+  "controls": {
+    "play": "Lecture",
+    "pause": "Pause",
+    "mute": "Muet",
+    "unmute": "Activer le son",
+    "fullscreen": "Plein écran",
+    "exit_fullscreen": "Quitter le plein écran",
+    "picture_in_picture": "Image dans l'image",
+    "exit_picture_in_picture": "Quitter l'image dans l'image",
+    "settings": "Paramètres",
+    "subtitles": "Sous-titres",
+    "audio": "Audio",
+    "quality": "Qualité",
+    "speed": "Vitesse",
+    "style": "Style",
+    "episodes": "Épisodes",
+    "previous_episode": "Épisode précédent",
+    "next_episode": "Épisode suivant",
+    "go_back": "Retour",
+    "play_next": "Lire le suivant",
+    "cancel": "Annuler",
+    "seek": "Rechercher",
+    "volume": "Volume",
+    "skip_intro": "Passer l'intro",
+    "skip_recap": "Passer le résumé",
+    "skip_outro": "Passer l'outro",
+    "skip_credits": "Passer le générique",
+    "skip_preview": "Passer l'aperçu"
+  },
+  "settings": {
+    "source": "Source",
+    "auto": "Auto",
+    "off": "Désactivé",
+    "no_sources": "Aucune source",
+    "no_audio_tracks": "Aucune piste audio disponible",
+    "audio_locked": "L'audio ne peut pas être changé pour cette source — choisissez-en une autre",
+    "no_subtitles": "Aucun sous-titre disponible",
+    "font_size": "Taille de police",
+    "color": "Couleur",
+    "background": "Arrière-plan",
+    "position": "Position",
+    "small": "Petite",
+    "medium": "Moyenne",
+    "large": "Grande",
+    "xlarge": "Très grande",
+    "none": "Aucun",
+    "low": "Faible",
+    "high": "Élevé",
+    "bottom": "Bas",
+    "top": "Haut"
+  },
+  "errors": {
+    "no_sources": "Aucune source disponible",
+    "playback_error": "Erreur de lecture — essayez une autre source",
+    "source_load_failed": "Erreur de chargement de la source"
+  },
+  "states": {
+    "next_episode_soon": "L'épisode suivant démarre bientôt…"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Einstellungen",
+  "common": {
+    "cancel": "Abbrechen"
+  },
+  "tabs": {
+    "appearance": "Darstellung",
+    "playback": "Wiedergabe",
+    "history": "Verlauf",
+    "backend": "Backend",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "Design",
+    "dark": "Dunkel",
+    "light": "Hell",
+    "system": "System",
+    "accent_color": "Akzentfarbe"
+  },
+  "playback": {
+    "autoplay": "Nächste Folge automatisch abspielen",
+    "autoplay_desc": "Spielt die nächste Folge nach einem 5-Sekunden-Countdown automatisch ab",
+    "auto_skip_intro": "Intros automatisch überspringen",
+    "auto_skip_intro_desc": "Überspringt Intro-Abschnitte automatisch, wenn Timing-Daten verfügbar sind"
+  },
+  "history": {
+    "title": "Wiedergabeverlauf",
+    "empty": "Noch kein Wiedergabeverlauf",
+    "clear_all": "Alle löschen",
+    "items": "Einträge",
+    "movie": "Film",
+    "tv": "Serie",
+    "clear_confirm_title": "Wiedergabeverlauf löschen?",
+    "clear_confirm_desc": "Dadurch werden alle Titel aus deinem Verlauf entfernt. Dies kann nicht rückgängig gemacht werden."
+  },
+  "reset": {
+    "title": "Alle Daten zurücksetzen",
+    "desc": "Löscht deinen Wiedergabeverlauf, deine Einstellungen und Präferenzen auf diesem Gerät.",
+    "button": "Alles zurücksetzen",
+    "confirm_title": "Alle App-Daten zurücksetzen?",
+    "confirm_desc": "Dadurch werden Verlauf, Design, Sprache und alle Präferenzen auf diesem Gerät gelöscht. Dies kann nicht rückgängig gemacht werden."
+  },
+  "backend": {
+    "title": "Backend",
+    "url": "Backend-URL",
+    "url_placeholder": "Leer lassen für Standard",
+    "url_desc": "Benutzerdefinierte Backend-URL. Leer lassen, um den Standard zu verwenden.",
+    "connection_status": "Verbindungsstatus",
+    "checking": "Wird geprüft …",
+    "connected": "Verbunden",
+    "disconnected": "Getrennt"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "TMDB-API-Schlüssel",
+    "configured": "Serverseitig konfiguriert",
+    "language": "Sprache",
+    "language_desc": "Sprache der Oberfläche sowie der TMDB-Titel, -Poster und -Beschreibungen.",
+    "region": "Region",
+    "region_desc": "Beeinflusst die Verfügbarkeit von TMDB-Inhalten"
+  }
+}

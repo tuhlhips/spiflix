@@ -1,5 +1,8 @@
 {
   "title": "Settings",
+  "common": {
+    "cancel": "Cancel"
+  },
   "tabs": {
     "appearance": "Appearance",
     "playback": "Playback",
@@ -7,16 +10,29 @@
     "backend": "Backend",
     "tmdb": "TMDB"
   },
+  "panel": {
+    "appearance": "Theme and accent color for the app.",
+    "playback": "How videos play and how much motion you see.",
+    "history": "Titles you've watched on this device.",
+    "backend": "The streaming backend this app connects to.",
+    "tmdb": "Content language and region for TMDB."
+  },
   "appearance": {
     "theme": "Theme",
+    "theme_desc": "Match your system, or force light or dark.",
     "dark": "Dark",
     "light": "Light",
     "system": "System",
-    "accent_color": "Accent Color"
+    "accent_color": "Accent Color",
+    "accent_desc": "The highlight color used across the app."
   },
   "playback": {
     "autoplay": "Autoplay Next Episode",
-    "autoplay_desc": "Automatically play the next episode after a 5s countdown"
+    "autoplay_desc": "Automatically play the next episode after a 5s countdown",
+    "auto_skip_intro": "Auto-Skip Intros",
+    "auto_skip_intro_desc": "Skip intro segments automatically when timing data is available",
+    "reduce_motion": "Reduce Motion",
+    "reduce_motion_desc": "Minimize animations and transitions across the app"
   },
   "history": {
     "title": "Watch History",
@@ -24,7 +40,16 @@
     "clear_all": "Clear All",
     "items": "items",
     "movie": "Movie",
-    "tv": "TV"
+    "tv": "TV",
+    "clear_confirm_title": "Clear watch history?",
+    "clear_confirm_desc": "This removes every title from your history. This can't be undone."
+  },
+  "reset": {
+    "title": "Reset all data",
+    "desc": "Clears your watch history, settings, and preferences on this device.",
+    "button": "Reset everything",
+    "confirm_title": "Reset all app data?",
+    "confirm_desc": "This clears your history, theme, language, and every preference on this device. This can't be undone."
   },
   "backend": {
     "title": "Backend",
@@ -41,7 +66,7 @@
     "api_key": "TMDB API Key",
     "configured": "Configured server-side",
     "language": "Language",
-    "language_desc": "UI language and TMDB content language",
+    "language_desc": "Interface language and the language of TMDB titles, posters and overviews.",
     "region": "Region",
     "region_desc": "Affects TMDB content availability"
   }

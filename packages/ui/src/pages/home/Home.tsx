@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { MediaRail } from '@/components/media/MediaRail'
 import { HeroCarousel } from '@/components/home/HeroCarousel'
+import { ContinueWatchingRail } from '@/components/home/ContinueWatchingRail'
 
 export default function Home() {
   const { t } = useTranslation()
@@ -16,7 +17,8 @@ export default function Home() {
     <div>
       <HeroCarousel />
 
-      <div className="-mt-16 relative z-10 px-0">
+      <div className="-mt-16 relative z-10 flex flex-col gap-8 px-0 pb-4">
+        <ContinueWatchingRail />
         <MediaRail title={t('home.trendingMovies')} fetcher={trendingMovies} />
         <MediaRail title={t('home.trendingTv')} fetcher={trendingTv} />
         <MediaRail title={t('home.popularMovies')} fetcher={popularMovies} />

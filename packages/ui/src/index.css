@@ -1,12 +1,16 @@
 @import "tailwindcss";
+/* Backing for the animate-in / fade-in / slide-in-from-* / zoom-in-* utilities
+   used across the app — without it they compile to nothing. */
+@import "tw-animate-css";
 
 @theme {
   --color-background: oklch(0.145 0 0);
   --color-foreground: oklch(0.985 0 0);
   --color-card: oklch(0.145 0 0);
   --color-card-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.637 0.237 25.331);
-  --color-primary-foreground: oklch(0.985 0 0);
+  /* Accent (default "red") — aligned to the design-handoff token #e92a34. */
+  --color-primary: #e92a34;
+  --color-primary-foreground: #ffffff;
   --color-secondary: oklch(0.269 0 0);
   --color-secondary-foreground: oklch(0.985 0 0);
   --color-muted: oklch(0.269 0 0);
@@ -16,12 +20,33 @@
   --color-destructive: oklch(0.577 0.245 27.325);
   --color-border: oklch(0.33 0 0);
   --color-input: oklch(0.33 0 0);
-  --color-ring: oklch(0.637 0.237 25.331);
+  --color-ring: #e92a34;
   --color-sidebar: oklch(0.145 0 0);
   --color-sidebar-foreground: oklch(0.985 0 0);
-  --color-sidebar-primary: oklch(0.637 0.237 25.331);
-  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-primary: #e92a34;
+  --color-sidebar-primary-foreground: #ffffff;
   --radius: 0.625rem;
+}
+
+/*
+ * Design-handoff tokens (additive). Existing components keep using the Tailwind
+ * `--color-*` scale; new primitives compose from these. `--accent` mirrors the
+ * active accent so `color-mix(in srgb, var(--accent) N%, transparent)` works
+ * everywhere and follows the [data-theme] accent switch below.
+ */
+:root {
+  --accent: var(--color-primary);
+  /* Raised surfaces (dark ground) */
+  --surface: #141416;
+  --surface-2: #1b1b1f;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.14);
+  /* Elevation + brand shadows */
+  --shadow-card: 0 22px 44px rgba(0, 0, 0, 0.6);
+  --ring-card: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --shadow-cta: 0 8px 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  --star: #f5c518;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 /* Light mode overrides */
@@ -40,15 +65,22 @@
   --color-input: oklch(0.922 0 0);
   --color-sidebar: oklch(0.985 0 0);
   --color-sidebar-foreground: oklch(0.145 0 0);
+  /* Handoff tokens, light ground */
+  --surface: #ffffff;
+  --surface-2: #f5f3f2;
+  --hairline: rgba(20, 12, 14, 0.10);
+  --hairline-strong: rgba(20, 12, 14, 0.16);
+  --shadow-card: 0 20px 44px rgba(40, 20, 24, 0.14);
+  --ring-card: inset 0 0 0 1px rgba(20, 12, 14, 0.08);
 }
 
-/* Color themes */
-[data-theme="blue"] { --color-primary: oklch(0.623 0.214 259.815); --color-ring: oklch(0.623 0.214 259.815); }
-[data-theme="green"] { --color-primary: oklch(0.696 0.17 162.48); --color-ring: oklch(0.696 0.17 162.48); }
-[data-theme="purple"] { --color-primary: oklch(0.627 0.265 303.9); --color-ring: oklch(0.627 0.265 303.9); }
-[data-theme="amber"] { --color-primary: oklch(0.769 0.188 70.08); --color-ring: oklch(0.769 0.188 70.08); }
-[data-theme="sky"] { --color-primary: oklch(0.754 0.154 233.53); --color-ring: oklch(0.754 0.154 233.53); }
-[data-theme="rose"] { --color-primary: oklch(0.646 0.222 355.73); --color-ring: oklch(0.646 0.222 355.73); }
+/* Color themes — accent hexes from the design handoff. */
+[data-theme="blue"]   { --color-primary: #4a7bf7; --color-ring: #4a7bf7; }
+[data-theme="green"]  { --color-primary: #12b981; --color-ring: #12b981; }
+[data-theme="purple"] { --color-primary: #a13ef0; --color-ring: #a13ef0; }
+[data-theme="amber"]  { --color-primary: #eda000; --color-ring: #eda000; }
+[data-theme="sky"]    { --color-primary: #33b6e6; --color-ring: #33b6e6; }
+[data-theme="rose"]   { --color-primary: #ee3d6e; --color-ring: #ee3d6e; }
 
 @layer base {
   * {
@@ -68,11 +100,68 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.33 0 0);
+  /* Follows the theme instead of staying dark in light mode */
+  background: var(--color-border);
   border-radius: 3px;
 }
 
 @keyframes carousel-progress {
   from { width: 0%; }
   to { width: 100%; }
+}
+
+/* Hide the scrollbar on horizontal rails while keeping them scrollable. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Horizontal scrollers (genre chips, continue-watching) hide their scrollbar. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/*
+ * Motion system (design handoff). Apply as utility classes on the element that
+ * enters. Every one is muted by the reduce-motion kill-switch below — both the
+ * OS `prefers-reduced-motion` and the in-app Reduce Motion setting
+ * ([data-reduce-motion="true"] set on <html> by SettingsProvider).
+ */
+@keyframes sfxFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sfxUp   { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes sfxPop  { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes sfxSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sfxPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Watch Party floating reactions — drift up and fade. */
+@keyframes partyFloat {
+  0%   { opacity: 0; transform: translateY(0) scale(0.6); }
+  15%  { opacity: 1; transform: translateY(-20px) scale(1); }
+  100% { opacity: 0; transform: translateY(-220px) scale(1.1); }
+}
+.party-float { animation: partyFloat 3s ease-out forwards; }
+
+.sfx-fade  { animation: sfxFade 0.35s ease both; }
+.sfx-up    { animation: sfxUp 0.4s var(--ease-out) both; }
+.sfx-pop   { animation: sfxPop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sfx-sheet { animation: sfxSheet 0.32s var(--ease-out) both; }
+.sfx-pulse { animation: sfxPulse 1.6s ease-in-out infinite; }
+
+/*
+ * Reduce-motion kill-switch. Honors the OS setting and the app toggle, and
+ * dampens ALL animation/transition app-wide (including tw-animate-css utilities
+ * and the carousel), not just the sfx classes.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }

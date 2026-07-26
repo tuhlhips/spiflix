@@ -1,0 +1,146 @@
+{
+  "app": {
+    "name": "Spiflix",
+    "tagline": "映画とTV番組のストリーミング"
+  },
+  "nav": {
+    "home": "ホーム",
+    "movies": "映画",
+    "shows": "TV番組",
+    "discover": "見つける",
+    "settings": "設定"
+  },
+  "header": {
+    "connected": "バックエンドに接続済み",
+    "disconnected": "バックエンド未接続",
+    "search": "検索"
+  },
+  "search": {
+    "placeholder": "映画やTV番組を検索…",
+    "typeHint": "2文字以上入力してください",
+    "noResults": "結果が見つかりません",
+    "all": "すべて",
+    "movies": "映画",
+    "tv": "TV",
+    "results": "件"
+  },
+  "home": {
+    "trendingMovies": "話題の映画",
+    "trendingTv": "話題のTV番組",
+    "popularMovies": "人気の映画",
+    "popularTv": "人気のTV番組",
+    "topRated": "高評価"
+  },
+  "media": {
+    "trendingNow": "急上昇",
+    "popular": "人気",
+    "topRated": "高評価",
+    "watchNow": "今すぐ見る",
+    "moreInfo": "詳細情報",
+    "noImage": "画像なし"
+  },
+  "drawer": {
+    "play": "再生",
+    "trailer": "予告編",
+    "episodes": "エピソード",
+    "cast": "キャスト",
+    "recommendations": "おすすめ",
+    "noImage": "画像なし",
+    "noOverview": "概要なし",
+    "grid": "グリッド",
+    "list": "リスト",
+    "loadError": "この作品の詳細を読み込めませんでした。",
+    "tryAgain": "再試行"
+  },
+  "discover": {
+    "title": "見つける",
+    "surpriseMe": "おまかせ",
+    "sortBy": "並べ替え",
+    "order": "順序",
+    "yearFrom": "開始年",
+    "yearTo": "終了年",
+    "any": "すべて",
+    "all": "すべて",
+    "movies": "映画",
+    "tvShows": "TV番組",
+    "noResults": "結果が見つかりません",
+    "noResultsHint": "フィルターを調整してみてください",
+    "loadError": "結果を読み込めませんでした。サーバーまたはTMDBの一時的な問題の可能性があります — もう一度お試しください。",
+    "previous": "前へ",
+    "next": "次へ",
+    "page": "ページ",
+    "goToPage": "ページに移動",
+    "go": "移動",
+    "sort": {
+      "popularity": "人気",
+      "rating": "評価",
+      "releaseDate": "公開日",
+      "title": "タイトル"
+    },
+    "dir": {
+      "highest": "高い順",
+      "lowest": "低い順",
+      "newest": "新しい順",
+      "oldest": "古い順",
+      "az": "A→Z",
+      "za": "Z→A"
+    }
+  },
+  "surprise": {
+    "title": "おまかせ",
+    "subtitle": "さまざまなジャンルと年代から選ばれた、完全ランダムの映画やシリーズ。",
+    "finding": "おすすめを探しています…",
+    "moviePick": "映画のおすすめ",
+    "tvPick": "シリーズのおすすめ",
+    "watchNow": "今すぐ見る",
+    "another": "別のを見る",
+    "copyId": "IDをコピー",
+    "copied": "コピーしました",
+    "backToDiscover": "見つけるに戻る",
+    "noPoster": "ポスターがありません",
+    "noDescription": "この作品の説明はありません。",
+    "votes": "票",
+    "errorNone": "おすすめがありませんでした。もう一度お試しください。",
+    "errorGeneric": "現在おすすめを取得できません。もう一度お試しください。",
+    "errorCopy": "IDをコピーできませんでした。手動でコピーしてください。"
+  },
+  "episodes": {
+    "title": "エピソード",
+    "newestFirst": "新しい順",
+    "oldestFirst": "古い順",
+    "none": "エピソードが見つかりません",
+    "noOverview": "概要なし",
+    "season": "シーズン"
+  },
+  "notFound": {
+    "code": "404",
+    "message": "ページが見つかりません",
+    "home": "ホームに戻る"
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "error": "問題が発生しました",
+    "reload": "ページを再読み込み",
+    "retry": "再試行"
+  },
+  "footer": {
+    "pages": "ページ",
+    "links": "リンク",
+    "disclaimer": "免責事項",
+    "copyright": "このサイトは著作権で保護されたコンテンツを一切ホストしていません。",
+    "streamMovies": "映画とTV番組のストリーミング"
+  },
+  "disclaimer": {
+    "title": "免責事項",
+    "goBack": "戻る",
+    "p1": "Spiflixは、著作権で保護されたコンテンツを自社サーバーに一切ホストしていません。本サイトに表示されるすべてのメディアコンテンツは第三者のサービスから提供され、一般に公開されているストリーミングリンクを通じて埋め込まれています。",
+    "p2": "本サイトは教育および個人利用のみを目的としています。当方は著作権で保護された素材の海賊行為や無断配布を奨励も容認もしません。",
+    "p3": "すべての商標、ロゴ、ブランド名は、それぞれの所有者に帰属します。これらの名称の使用は、推奨や提携を意味するものではありません。",
+    "p4": "本サイトを通じて利用可能なコンテンツがあなたの著作権を侵害していると思われる場合は、該当するコンテンツのホストに直接ご連絡ください。",
+    "p5": "本サービスは、明示・黙示を問わずいかなる保証もなく「現状のまま」提供されます。本サイトの運営者は、本サービスの利用によって生じたいかなる損害についても責任を負いません。"
+  },
+  "error": {
+    "title": "問題が発生しました",
+    "reload": "ページを再読み込み"
+  }
+}

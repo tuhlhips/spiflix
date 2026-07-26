@@ -8,53 +8,75 @@
     "movies": "Movies",
     "shows": "TV Shows",
     "discover": "Discover",
+    "myList": "My List",
+    "search": "Search",
+    "account": "Account",
     "settings": "Settings"
+  },
+  "header": {
+    "connected": "Backend connected",
+    "disconnected": "Backend disconnected",
+    "search": "Search"
   },
   "search": {
     "placeholder": "Search movies and TV shows...",
-    "noResults": "No results found",
-    "filterNoResults": "No results match this filter",
     "typeHint": "Type at least 2 characters to search",
+    "noResults": "No results found",
     "all": "All",
     "movies": "Movies",
     "tv": "TV",
     "results": "results",
-    "noResultsFilter": "No results match this filter"
+    "seeAll": "See all results for “{{query}}”"
   },
-  "player": {
-    "noSources": "No sources available",
-    "playbackError": "Playback error — try another source",
-    "goBack": "Go Back",
-    "episodes": "Episodes",
-    "nextEpisode": "Next episode starting soon...",
-    "playNext": "Play Next",
-    "cancel": "Cancel",
-    "off": "Off",
-    "auto": "Auto",
-    "noAudioTracks": "No audio tracks available",
-    "noSubtitles": "No subtitles available",
-    "noSources": "No sources",
-    "settings": {
-      "source": "Source",
-      "subtitles": "Subtitles",
-      "audio": "Audio",
-      "quality": "Quality",
-      "speed": "Speed",
-      "style": "Style",
-      "fontSize": "Font Size",
-      "color": "Color",
-      "background": "Background",
-      "position": "Position",
-      "small": "Small",
-      "medium": "Medium",
-      "large": "Large",
-      "xlarge": "X-Large",
-      "none": "None",
-      "low": "Low",
-      "high": "High",
-      "bottom": "Bottom",
-      "top": "Top"
-    }
+  "home": {
+    "continueWatching": "Continue Watching",
+    "trendingMovies": "Trending Movies",
+    "trendingTv": "Trending TV Shows",
+    "popularMovies": "Popular Movies",
+    "popularTv": "Popular TV Shows",
+    "topRated": "Top Rated"
+  },
+  "media": {
+    "trendingNow": "Trending Now",
+    "popular": "Popular",
+    "topRated": "Top Rated",
+    "watchNow": "Watch Now",
+    "moreInfo": "More Info",
+    "noImage": "No image",
+    "featuredMovie": "Movie of the week",
+    "featuredSeries": "Featured series",
+    "playFirst": "Play S1:E1",
+    "episodesInfo": "Episodes & Info",
+    "seasons_one": "{{count}} Season",
+    "seasons_other": "{{count}} Seasons"
+  },
+  "party": {
+    "title": "Watch Party",
+    "subtitle": "Watch in sync with friends — same stream, live chat, reactions.",
+    "start": "Start a watch party",
+    "or": "or",
+    "join": "Join",
+    "codePlaceholder": "Enter a party code or link",
+    "live": "Live",
+    "connecting": "Connecting…",
+    "watching_one": "{{count}} watching",
+    "watching_other": "{{count}} watching",
+    "invite": "Invite",
+    "copied": "Copied",
+    "linkCopied": "Party link copied to clipboard",
+    "linkCopyFailed": "Couldn't copy the link",
+    "leave": "Leave party",
+    "hostPick": "You're the host — load something to watch.",
+    "waitingForHost": "Waiting for the host to pick something…",
+    "browse": "Browse titles",
+    "chatEmpty": "Say hi to kick things off.",
+    "messagePlaceholder": "Send a message…",
+    "send": "Send",
+    "react": "React",
+    "delete": "Delete",
+    "kickedTitle": "You were removed from the party",
+    "backHome": "Back to Home",
+    "watchTogether": "Watch Party"
   },
   "drawer": {
     "play": "Play",
@@ -63,50 +85,182 @@
     "cast": "Cast",
     "recommendations": "Recommendations",
     "noImage": "No image",
-    "noOverview": "No overview available",
-    "season": "Season",
-    "ep": "Ep",
+    "noOverview": "No overview",
     "grid": "Grid",
-    "list": "List"
+    "list": "List",
+    "loadError": "Couldn't load details for this title.",
+    "tryAgain": "Try Again"
   },
-  "settings": {
-    "title": "Settings",
-    "appearance": {
-      "theme": "Theme",
-      "dark": "Dark",
-      "light": "Light",
-      "system": "System",
-      "accentColor": "Accent Color"
+  "detail": {
+    "series": "Series",
+    "film": "Film",
+    "play": "Play",
+    "resume": "Resume",
+    "trailer": "Trailer",
+    "myList": "My List",
+    "inList": "In My List",
+    "like": "Like",
+    "liked": "Liked",
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard",
+    "linkCopyFailed": "Couldn't copy the link",
+    "cast": "Cast",
+    "director": "Director",
+    "creator": "Creator",
+    "studio": "Studio",
+    "network": "Network",
+    "country": "Country",
+    "noOverview": "No overview available for this title.",
+    "typeMovie": "Feature Film",
+    "typeTv": "TV Series",
+    "tabs": {
+      "overview": "Overview",
+      "episodes": "Episodes",
+      "similar": "More Like This"
     },
-    "playback": {
-      "autoplay": "Autoplay Next Episode",
-      "autoplayDesc": "Automatically play the next episode after a 5s countdown"
-    },
-    "history": {
-      "title": "Watch History",
-      "empty": "No watch history yet",
-      "clearAll": "Clear All",
-      "items": "items"
-    },
-    "backend": {
-      "title": "Backend",
-      "url": "Backend URL",
-      "urlPlaceholder": "Leave empty for default",
-      "urlDesc": "Custom backend URL. Leave empty to use the default.",
-      "connectionStatus": "Connection Status",
-      "checking": "Checking...",
-      "connected": "Connected",
-      "disconnected": "Disconnected"
-    },
-    "tmdb": {
-      "title": "TMDB",
-      "apiKey": "TMDB API Key",
-      "configured": "Configured server-side",
+    "facts": {
+      "genre": "Genre",
+      "release": "Release",
+      "runtime": "Runtime",
+      "rating": "Rating",
+      "type": "Type",
       "language": "Language",
-      "languageDesc": "UI language and TMDB content language",
-      "region": "Region",
-      "regionDesc": "Affects TMDB content availability"
+      "status": "Status"
     }
+  },
+  "discover": {
+    "title": "Discover",
+    "surpriseMe": "Surprise Me",
+    "sortBy": "Sort by",
+    "order": "Order",
+    "yearFrom": "Year from",
+    "yearTo": "Year to",
+    "any": "Any",
+    "all": "All",
+    "movies": "Movies",
+    "tvShows": "TV Shows",
+    "noResults": "No results found",
+    "noResultsHint": "Try adjusting your filters",
+    "loadError": "Couldn't load results. This may be a temporary problem with the server or TMDB — please try again.",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "goToPage": "Go to page",
+    "go": "Go",
+    "sort": {
+      "popularity": "Popularity",
+      "rating": "Rating",
+      "releaseDate": "Release Date",
+      "title": "Title"
+    },
+    "dir": {
+      "highest": "Highest first",
+      "lowest": "Lowest first",
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "az": "A–Z",
+      "za": "Z–A"
+    }
+  },
+  "surprise": {
+    "title": "Surprise Me",
+    "subtitle": "A genuinely random movie or series, picked from a broad range of genres and eras.",
+    "cantDecide": "Can't decide?",
+    "playSomething": "Play Something",
+    "tagline": "Let Spiflix pick for you. Spin the wheel and commit — no scrolling, no second-guessing.",
+    "anything": "Anything",
+    "aMovie": "A Movie",
+    "aSeries": "A Series",
+    "yourPickHere": "Your pick appears here",
+    "surpriseMe": "Surprise Me",
+    "spinAgain": "Spin Again",
+    "play": "Play",
+    "moreInfo": "More Info",
+    "finding": "Finding you something to watch…",
+    "moviePick": "Movie pick",
+    "tvPick": "TV series pick",
+    "watchNow": "Watch now",
+    "another": "Another one",
+    "copyId": "Copy ID",
+    "copied": "Copied",
+    "backToDiscover": "Back to Discover",
+    "noPoster": "No poster available",
+    "noDescription": "No description is available for this title.",
+    "votes": "votes",
+    "errorNone": "No recommendations were available. Try again for a new roll.",
+    "errorGeneric": "Unable to get a recommendation right now. Please try again.",
+    "errorCopy": "Could not copy the ID. Please copy it manually."
+  },
+  "episodes": {
+    "title": "Episodes",
+    "newestFirst": "Newest First",
+    "oldestFirst": "Oldest First",
+    "none": "No episodes found",
+    "noOverview": "No overview",
+    "season": "Season",
+    "allSeries": "All series",
+    "play": "Play",
+    "playFrom": "Play S{{season}}:E1",
+    "resume": "Resume S{{season}}:E{{episode}}",
+    "myList": "My List",
+    "download": "Download",
+    "downloadUnavailable": "Offline downloads aren't available in this build.",
+    "loadError": "Couldn't load this series. Please try again."
+  },
+  "mylist": {
+    "eyebrow": "Saved by {{name}}",
+    "title": "My List",
+    "all": "All",
+    "movies": "Movies",
+    "tv": "TV",
+    "count_one": "{{count}} title",
+    "count_other": "{{count}} titles",
+    "emptyTitle": "Nothing saved yet",
+    "emptyBody": "Tap the + on any title to keep track of what you want to watch.",
+    "browse": "Browse titles",
+    "remove": "Remove from My List"
+  },
+  "profiles": {
+    "title": "Who's watching?",
+    "add": "Add Profile",
+    "manage": "Manage Profiles",
+    "done": "Done",
+    "kids": "Kids",
+    "newProfile": "New profile",
+    "editProfile": "Edit profile",
+    "name": "Name",
+    "namePlaceholder": "Profile name",
+    "color": "Color",
+    "kidsProfile": "Kids profile",
+    "save": "Save",
+    "create": "Create",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "remove": "Remove profile"
+  },
+  "searchPage": {
+    "placeholder": "Search movies, shows, genres...",
+    "all": "All",
+    "movies": "Movies",
+    "tv": "TV",
+    "clear": "Clear",
+    "resultsLabel": "Results",
+    "hint": "Find something to watch",
+    "hintBody": "Search by title, and filter by movies or TV.",
+    "noMatchTitle": "No matches for “{{query}}”",
+    "noMatchBody": "Try a different title, genre, or check the spelling.",
+    "suggest": "You might like"
+  },
+  "notFound": {
+    "code": "404",
+    "message": "Page not found",
+    "home": "Back to Home"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "reload": "Reload Page",
+    "retry": "Try Again"
   },
   "footer": {
     "pages": "Pages",
@@ -114,43 +268,6 @@
     "disclaimer": "Disclaimer",
     "copyright": "This site does not host any copyrighted content.",
     "streamMovies": "Stream movies and TV shows"
-  },
-  "discover": {
-    "title": "Discover",
-    "surpriseMe": "Surprise Me",
-    "sortBy": "Sort by",
-    "yearFrom": "Year from",
-    "yearTo": "Year to",
-    "all": "All",
-    "noResults": "No results found",
-    "noResultsHint": "Try adjusting your filters",
-    "previous": "Previous",
-    "next": "Next",
-    "page": "Page"
-  },
-  "media": {
-    "movie": "Movie",
-    "tv": "TV",
-    "watchNow": "Watch Now",
-    "noImage": "No Image",
-    "trendingMovies": "Trending Movies",
-    "trendingTv": "Trending TV Shows",
-    "popularMovies": "Popular Movies",
-    "popularTv": "Popular TV Shows",
-    "topRated": "Top Rated",
-    "trendingNow": "Trending Now",
-    "popular": "Popular",
-    "topRated": "Top Rated"
-  },
-  "common": {
-    "loading": "Loading...",
-    "error": "Something went wrong",
-    "reload": "Reload Page"
-  },
-  "header": {
-    "connected": "Backend connected",
-    "disconnected": "Backend disconnected",
-    "search": "Search"
   },
   "disclaimer": {
     "title": "Disclaimer",
@@ -161,35 +278,8 @@
     "p4": "If you believe that any content available through this website infringes upon your copyright, please contact the respective content host directly.",
     "p5": "This service is provided \"as is\" without any warranty of any kind, express or implied. The operators of this site shall not be held liable for any damages arising from the use of this service."
   },
-  "home": {
-    "trendingMovies": "Trending Movies",
-    "trendingTv": "Trending TV Shows",
-    "popularMovies": "Popular Movies",
-    "popularTv": "Popular TV Shows",
-    "topRated": "Top Rated"
-  },
-  "media": {
-    "trendingNow": "Trending Now",
-    "popular": "Popular",
-    "topRated": "Top Rated"
-  },
-  "drawer": {
-    "play": "Play",
-    "trailer": "Trailer",
-    "episodes": "Episodes",
-    "cast": "Cast",
-    "recommendations": "Recommendations",
-    "noImage": "No image",
-    "noOverview": "No overview available"
-  },
   "error": {
     "title": "Something went wrong",
     "reload": "Reload Page"
-  },
-  "movies": {
-    "title": "Movies"
-  },
-  "shows": {
-    "title": "TV Shows"
   }
 }

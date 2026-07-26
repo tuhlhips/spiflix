@@ -1,0 +1,61 @@
+{
+  "controls": {
+    "play": "播放",
+    "pause": "暂停",
+    "mute": "静音",
+    "unmute": "取消静音",
+    "fullscreen": "全屏",
+    "exit_fullscreen": "退出全屏",
+    "picture_in_picture": "画中画",
+    "exit_picture_in_picture": "退出画中画",
+    "settings": "设置",
+    "subtitles": "字幕",
+    "audio": "音轨",
+    "quality": "画质",
+    "speed": "速度",
+    "style": "样式",
+    "episodes": "剧集",
+    "previous_episode": "上一集",
+    "next_episode": "下一集",
+    "go_back": "返回",
+    "play_next": "播放下一集",
+    "cancel": "取消",
+    "seek": "跳转",
+    "volume": "音量",
+    "skip_intro": "跳过片头",
+    "skip_recap": "跳过回顾",
+    "skip_outro": "跳过片尾",
+    "skip_credits": "跳过演职员表",
+    "skip_preview": "跳过预告"
+  },
+  "settings": {
+    "source": "来源",
+    "auto": "自动",
+    "off": "关闭",
+    "no_sources": "没有来源",
+    "no_audio_tracks": "没有可用的音轨",
+    "audio_locked": "此来源无法切换音轨 — 请选择其他来源",
+    "no_subtitles": "没有可用的字幕",
+    "font_size": "字号",
+    "color": "颜色",
+    "background": "背景",
+    "position": "位置",
+    "small": "小",
+    "medium": "中",
+    "large": "大",
+    "xlarge": "超大",
+    "none": "无",
+    "low": "低",
+    "high": "高",
+    "bottom": "底部",
+    "top": "顶部"
+  },
+  "errors": {
+    "no_sources": "没有可用的来源",
+    "playback_error": "播放出错 — 请尝试其他来源",
+    "source_load_failed": "加载来源出错"
+  },
+  "states": {
+    "next_episode_soon": "下一集即将开始…"
+  }
+}

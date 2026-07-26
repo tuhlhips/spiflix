@@ -1,9 +1,13 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { ErrorBoundary } from '../../components/ErrorBoundary'
 
 export function BlankLayout() {
+  const location = useLocation()
   return (
     <div className="min-h-screen bg-background">
-      <Outlet />
+      <ErrorBoundary key={location.pathname}>
+        <Outlet />
+      </ErrorBoundary>
     </div>
   )
 }

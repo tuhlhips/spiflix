@@ -1,0 +1,62 @@
+{
+  "title": "설정",
+  "common": {
+    "cancel": "취소"
+  },
+  "tabs": {
+    "appearance": "화면",
+    "playback": "재생",
+    "history": "기록",
+    "backend": "백엔드",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "테마",
+    "dark": "다크",
+    "light": "라이트",
+    "system": "시스템",
+    "accent_color": "강조 색상"
+  },
+  "playback": {
+    "autoplay": "다음 에피소드 자동 재생",
+    "autoplay_desc": "5초 카운트다운 후 다음 에피소드를 자동으로 재생합니다",
+    "auto_skip_intro": "인트로 자동 건너뛰기",
+    "auto_skip_intro_desc": "타이밍 데이터가 있을 때 인트로 구간을 자동으로 건너뜁니다"
+  },
+  "history": {
+    "title": "시청 기록",
+    "empty": "아직 시청 기록이 없습니다",
+    "clear_all": "모두 지우기",
+    "items": "개",
+    "movie": "영화",
+    "tv": "TV",
+    "clear_confirm_title": "시청 기록을 지울까요?",
+    "clear_confirm_desc": "기록에서 모든 항목이 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+  },
+  "reset": {
+    "title": "모든 데이터 초기화",
+    "desc": "이 기기의 시청 기록, 설정, 환경설정을 지웁니다.",
+    "button": "모두 초기화",
+    "confirm_title": "앱의 모든 데이터를 초기화할까요?",
+    "confirm_desc": "이 기기의 기록, 테마, 언어 및 모든 환경설정이 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+  },
+  "backend": {
+    "title": "백엔드",
+    "url": "백엔드 URL",
+    "url_placeholder": "기본값을 사용하려면 비워 두세요",
+    "url_desc": "사용자 지정 백엔드 URL. 기본값을 사용하려면 비워 두세요.",
+    "connection_status": "연결 상태",
+    "checking": "확인 중…",
+    "connected": "연결됨",
+    "disconnected": "연결 끊김"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "TMDB API 키",
+    "configured": "서버에서 구성됨",
+    "language": "언어",
+    "language_desc": "인터페이스 언어 및 TMDB 제목, 포스터, 개요의 언어.",
+    "region": "지역",
+    "region_desc": "TMDB 콘텐츠 제공 여부에 영향을 줍니다"
+  }
+}

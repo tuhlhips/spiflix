@@ -14,6 +14,7 @@ interface MediaRailProps {
     posterPath: string | null
     rating: number
     releaseDate?: string
+    badge?: string
   }
 }
 
@@ -56,6 +57,10 @@ export function MediaRail({ title, fetcher, isLoading: externalLoading, mapper =
     emblaApi.on('select', onSelect)
     emblaApi.on('reInit', onSelect)
     onSelect()
+    return () => {
+      emblaApi.off('select', onSelect)
+      emblaApi.off('reInit', onSelect)
+    }
   }, [emblaApi, onSelect])
 
   const loading = externalLoading ?? internalLoading
@@ -84,30 +89,32 @@ export function MediaRail({ title, fetcher, isLoading: externalLoading, mapper =
       </div>
 
       {loading ? (
-        <div className="flex gap-3 overflow-hidden px-4 sm:px-6">
+        <div className="flex gap-4 overflow-hidden px-4 sm:px-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="w-[150px] sm:w-[180px] shrink-0">
-              <div className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
+            <div key={i} className="w-[140px] sm:w-[160px] lg:w-[176px] shrink-0">
+              <div className="aspect-[2/3] rounded-[10px] bg-muted animate-pulse" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden px-4 sm:px-6" ref={emblaRef}>
-          <div className="flex gap-3" style={{ backfaceVisibility: 'hidden' }}>
+        // -my-4 py-4: give the overflow-hidden embla viewport vertical room so
+        // the cards' hover-scale isn't clipped, without adding layout height.
+        <div className="-my-4 overflow-hidden px-4 py-4 sm:px-6" ref={emblaRef}>
+          <div className="flex gap-4" style={{ backfaceVisibility: 'hidden' }}>
             {items.map((item) => {
               const mapped = mapper(item)
               return (
-                <div key={`${mapped.type}-${mapped.id}`} className="flex-shrink-0 min-w-0" style={{ flex: '0 0 auto', width: '150px' }}>
-                  <div className="sm:w-[180px]">
-                    <MediaCard
-                      id={mapped.id}
-                      type={mapped.type}
-                      title={mapped.title}
-                      posterPath={mapped.posterPath}
-                      rating={mapped.rating}
-                      releaseDate={mapped.releaseDate}
-                    />
-                  </div>
+                <div key={`${mapped.type}-${mapped.id}`} className="w-[140px] shrink-0 sm:w-[160px] lg:w-[176px]">
+                  <MediaCard
+                    id={mapped.id}
+                    type={mapped.type}
+                    title={mapped.title}
+                    posterPath={mapped.posterPath}
+                    rating={mapped.rating}
+                    releaseDate={mapped.releaseDate}
+                    badge={mapped.badge}
+                    variant="rail"
+                  />
                 </div>
               )
             })}

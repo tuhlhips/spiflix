@@ -1,0 +1,62 @@
+{
+  "title": "設定",
+  "common": {
+    "cancel": "キャンセル"
+  },
+  "tabs": {
+    "appearance": "外観",
+    "playback": "再生",
+    "history": "履歴",
+    "backend": "バックエンド",
+    "tmdb": "TMDB"
+  },
+  "appearance": {
+    "theme": "テーマ",
+    "dark": "ダーク",
+    "light": "ライト",
+    "system": "システム",
+    "accent_color": "アクセントカラー"
+  },
+  "playback": {
+    "autoplay": "次のエピソードを自動再生",
+    "autoplay_desc": "5秒のカウントダウン後に次のエピソードを自動的に再生します",
+    "auto_skip_intro": "イントロを自動スキップ",
+    "auto_skip_intro_desc": "タイミングデータが利用できる場合、イントロ部分を自動的にスキップします"
+  },
+  "history": {
+    "title": "視聴履歴",
+    "empty": "視聴履歴はまだありません",
+    "clear_all": "すべて消去",
+    "items": "件",
+    "movie": "映画",
+    "tv": "TV",
+    "clear_confirm_title": "視聴履歴を消去しますか？",
+    "clear_confirm_desc": "履歴からすべての作品が削除されます。この操作は元に戻せません。"
+  },
+  "reset": {
+    "title": "すべてのデータをリセット",
+    "desc": "このデバイスの視聴履歴、設定、環境設定を消去します。",
+    "button": "すべてリセット",
+    "confirm_title": "アプリのすべてのデータをリセットしますか？",
+    "confirm_desc": "このデバイスの履歴、テーマ、言語、すべての環境設定が消去されます。この操作は元に戻せません。"
+  },
+  "backend": {
+    "title": "バックエンド",
+    "url": "バックエンドURL",
+    "url_placeholder": "既定値を使うには空欄にしてください",
+    "url_desc": "カスタムのバックエンドURL。既定値を使うには空欄にしてください。",
+    "connection_status": "接続状態",
+    "checking": "確認中…",
+    "connected": "接続済み",
+    "disconnected": "未接続"
+  },
+  "tmdb": {
+    "title": "TMDB",
+    "api_key": "TMDB APIキー",
+    "configured": "サーバー側で設定済み",
+    "language": "言語",
+    "language_desc": "インターフェースの言語と、TMDBのタイトル・ポスター・概要の言語。",
+    "region": "地域",
+    "region_desc": "TMDBコンテンツの提供状況に影響します"
+  }
+}

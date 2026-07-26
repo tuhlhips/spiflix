@@ -2,7 +2,8 @@ import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { MediaRail } from '@/components/media/MediaRail'
-import { HeroCarousel } from '@/components/home/HeroCarousel'
+import { Spotlight } from '@/components/media/Spotlight'
+import { GenreTiles } from '@/components/media/GenreTiles'
 
 export default function Movies() {
   const { t } = useTranslation()
@@ -12,8 +13,9 @@ export default function Movies() {
 
   return (
     <div>
-      <HeroCarousel type="movie" />
-      <div className="-mt-16 relative z-10 px-0">
+      <Spotlight type="movie" />
+      <GenreTiles type="movie" />
+      <div className="relative z-10 space-y-2 pb-12">
         <MediaRail title={t('media.trendingNow')} fetcher={trending} />
         <MediaRail title={t('media.popular')} fetcher={popular} />
         <MediaRail title={t('media.topRated')} fetcher={topRated} />

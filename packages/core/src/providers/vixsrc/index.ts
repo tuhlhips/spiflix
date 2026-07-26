@@ -12,10 +12,10 @@ import type {
  *
  * Flow:
  * 1. GET /api/movie/{tmdbId} → JSON with embed URL
- * 2. GET {embed_url} → HTML containing token, expires, playlist URL
- * 3. Build master URL: {playlist}?token={token}&expires={expires}&h=1
- * 4. GET master URL → m3u8 manifest with quality variants
- * 5. Wrap master URL through proxy
+ * 2. GET {embed_url} → HTML containing token, expires, playlist URLs
+ * 3. Build stream URLs: {playlist}?token={token}&expires={expires}&h=1
+ * 4. Try all available stream servers, collect working playlists
+ * 5. Wrap each through proxy
  */
 export default class VixSrcProvider extends BaseProvider {
   readonly config: ProviderConfig = {
@@ -58,7 +58,7 @@ export default class VixSrcProvider extends BaseProvider {
       const apiData = await apiRes.json() as { src?: string }
       if (!apiData.src) return this.emptyResult([this.errorDiagnostic('No embed URL in API response')])
 
-      // Step 2: Fetch embed page to extract token data
+      // Step 2: Fetch embed page to extract token + all stream URLs
       const embedUrl = `${this.config.baseUrl}${apiData.src}`
       const embedRes = await fetch(embedUrl, {
         headers: this.headers,
@@ -70,60 +70,112 @@ export default class VixSrcProvider extends BaseProvider {
       const tokenData = this.extractTokenData(html)
       if (!tokenData) return this.emptyResult([this.errorDiagnostic('Failed to extract token data')])
 
-      // Step 3: Build master URL
-      const masterUrl = this.buildMasterUrl(tokenData)
+      // Collect all stream URLs (masterPlaylist + any in window.streams)
+      const streamUrls = this.collectStreamUrls(html, tokenData)
 
-      // Step 4: Fetch master playlist to verify it works
-      const playlistRes = await fetch(masterUrl, {
-        headers: { ...this.headers, Referer: embedUrl },
-        signal: AbortSignal.timeout(10_000),
-      })
-      if (!playlistRes.ok) return this.emptyResult([this.errorDiagnostic(`Playlist returned ${playlistRes.status}`)])
+      // Step 3: Try all stream URLs in parallel, collect working ones
+      const results = await Promise.allSettled(
+        streamUrls.map(async ({ url, label }) => {
+          const fullUrl = this.buildStreamUrl(url, tokenData)
+          const playlistRes = await fetch(fullUrl, {
+            headers: { ...this.headers, Referer: embedUrl },
+            signal: AbortSignal.timeout(10_000),
+          })
+          if (!playlistRes.ok) throw new Error(`Playlist returned ${playlistRes.status}`)
+          const playlist = await playlistRes.text()
+          const variants = this.parseVariants(playlist)
+          const bestResolution = variants.length > 0
+            ? Math.max(...variants.map(v => v.resolution))
+            : 1080
 
-      const playlist = await playlistRes.text()
-      const variants = this.parseVariants(playlist)
-      const bestResolution = variants.length > 0
-        ? Math.max(...variants.map(v => v.resolution))
-        : 1080
+          return {
+            url: this.createProxyUrl(fullUrl, {
+              ...this.headers,
+              Referer: embedUrl,
+            }, new Date(Number(tokenData.expires) * 1000).getTime()),
+            type: 'hls' as const,
+            quality: `${bestResolution}p`,
+            provider: { id: this.config.id, name: this.config.name },
+            audioTracks: this.parseAudioTracks(playlist),
+            label,
+            playlist,
+          }
+        }),
+      )
 
-      const subtitles = this.parseSubtitles(playlist)
+      const sources: Source[] = []
+      const subtitles: Subtitle[] = []
+      let bestPlaylist = ''
 
-      const source: Source = {
-        url: this.createProxyUrl(masterUrl, {
-          ...this.headers,
-          Referer: embedUrl,
-        }, new Date(Number(tokenData.expires) * 1000).getTime()),
-        type: 'hls',
-        quality: `${bestResolution}p`,
-        provider: { id: this.config.id, name: this.config.name },
-        audioTracks: this.parseAudioTracks(playlist),
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          const { playlist, label: _label, ...source } = r.value
+          sources.push(source)
+          if (!bestPlaylist) bestPlaylist = playlist
+          // Merge subtitles from first successful playlist
+          if (subtitles.length === 0) {
+            subtitles.push(...this.parseSubtitles(playlist))
+          }
+        }
       }
 
-      return { sources: [source], subtitles, diagnostics: [], expiresAt: new Date(Number(tokenData.expires) * 1000).toISOString() }
+      if (sources.length === 0) return this.emptyResult([this.errorDiagnostic('All playlist servers failed')])
+
+      return {
+        sources,
+        subtitles,
+        diagnostics: [],
+        expiresAt: new Date(Number(tokenData.expires) * 1000).toISOString(),
+      }
     } catch (err: any) {
       return this.emptyResult([this.errorDiagnostic(err.message)])
     }
   }
 
   private extractTokenData(html: string): { token: string; expires: string; playlist: string } | null {
-    const token = html.match(/token['"]\s*:\s*['"]([^'"]+)/)?.[1]
-    const expires = html.match(/expires['"]\s*:\s*['"]([^'"]+)/)?.[1]
-    const playlist = html.match(/url\s*:\s*['"]([^'"]+)/)?.[1]
+    // Extract from window.masterPlaylist
+    const match = html.match(/window\.masterPlaylist\s*=\s*\{([^}]+)\}/)
+    if (!match) return null
+    const block = match[1]
+    const token = block.match(/token['"]\s*:\s*['"]([^'"]+)/)?.[1]
+    const expires = block.match(/expires['"]\s*:\s*['"]([^'"]+)/)?.[1]
+    const playlistMatch = block.match(/url\s*:\s*['"]([^'"]+)/)
+    const playlist = playlistMatch ? playlistMatch[1] : html.match(/url\s*:\s*['"]([^'"]+)/)?.[1]
 
     if (!token || !expires || !playlist) return null
 
-    // Check if token is expired. A non-numeric expires must be rejected here:
-    // NaN compares false against everything, so it would sail through this
-    // check and produce proxy URLs with an invalid expiry downstream.
     const expiresMs = Number(expires) * 1000
     if (!Number.isFinite(expiresMs) || expiresMs - 60_000 < Date.now()) return null
 
     return { token, expires, playlist }
   }
 
-  private buildMasterUrl(data: { token: string; expires: string; playlist: string }): string {
-    const separator = data.playlist.includes('?') ? '&' : '?'
-    return `${data.playlist}${separator}token=${data.token}&expires=${data.expires}&h=1`
+  private collectStreamUrls(html: string, tokenData: { token: string; expires: string; playlist: string }): Array<{ url: string; label: string }> {
+    const urls: Array<{ url: string; label: string }> = []
+
+    // Always include the primary master playlist
+    urls.push({ url: tokenData.playlist, label: 'Auto' })
+
+    // Extract window.streams for alternate CDN servers
+    const streamsMatch = html.match(/window\.streams\s*=\s*(\[[^\]]+\])/)
+    if (streamsMatch) {
+      try {
+        const decoded = streamsMatch[1].replace(/\\u0026/g, '&')
+        const streams = JSON.parse(decoded) as Array<{ name: string; active: boolean; url: string }>
+        for (const s of streams) {
+          urls.push({ url: s.url, label: s.name })
+        }
+      } catch {
+        // window.streams parsing is non-critical
+      }
+    }
+
+    return urls
+  }
+
+  private buildStreamUrl(baseUrl: string, data: { token: string; expires: string }): string {
+    const separator = baseUrl.includes('?') ? '&' : '?'
+    return `${baseUrl}${separator}token=${data.token}&expires=${data.expires}&h=1`
   }
 
   private parseVariants(content: string): Array<{ resolution: number; url: string }> {
@@ -139,7 +191,7 @@ export default class VixSrcProvider extends BaseProvider {
   private parseAudioTracks(content: string): Array<{ language: string; label: string }> {
     const tracks: Array<{ language: string; label: string }> = []
     for (const line of content.split('\n')) {
-      if (!line.startsWith('#EXT-X-MEDIA:TYPE=AUDIO')) continue
+      if (!line.startsWith('#EXT-X-MEDIA:') || !/TYPE=AUDIO\b/.test(line)) continue
       const language = line.match(/LANGUAGE="([^"]+)"/)?.[1] ?? 'unknown'
       const label = line.match(/NAME="([^"]+)"/)?.[1] ?? 'Audio'
       tracks.push({ language, label })
@@ -150,7 +202,7 @@ export default class VixSrcProvider extends BaseProvider {
   private parseSubtitles(content: string): Subtitle[] {
     const subtitles: Subtitle[] = []
     for (const line of content.split('\n')) {
-      if (!line.startsWith('#EXT-X-MEDIA:TYPE=SUBTITLES')) continue
+      if (!line.startsWith('#EXT-X-MEDIA:') || !/TYPE=SUBTITLES\b/.test(line)) continue
       const url = line.match(/URI="([^"]+)"/)?.[1]
       if (!url) continue
       const language = line.match(/NAME="([^"]+)"/)?.[1] ?? 'unknown'

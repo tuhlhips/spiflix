@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spiflix-ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@spiflix/ui", "dev"],
+      "port": 5173
+    }
+  ]
+}

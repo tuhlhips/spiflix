@@ -37,9 +37,11 @@ export async function sourceRoutes(app: FastifyInstance) {
         process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
       )
 
-      console.log(`[Sources] movie:${id} → ${result.sources.length} sources, ${result.diagnostics.length} diagnostics`)
+      request.log.info(`movie:${id} → ${result.sources.length} sources, ${result.diagnostics.length} diagnostics`)
       if (result.diagnostics.length > 0) {
-        console.log('[Sources] Diagnostics:', JSON.stringify(result.diagnostics, null, 2))
+        // Full diagnostics only at debug — dumping the JSON at info drowned
+        // the prod logs on every cache miss.
+        request.log.debug({ diagnostics: result.diagnostics }, `movie:${id} diagnostics`)
       }
 
       cacheResult(cacheKey, result)

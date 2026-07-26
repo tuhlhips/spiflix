@@ -1,0 +1,146 @@
+{
+  "app": {
+    "name": "Spiflix",
+    "tagline": "在线观看电影和剧集"
+  },
+  "nav": {
+    "home": "首页",
+    "movies": "电影",
+    "shows": "剧集",
+    "discover": "发现",
+    "settings": "设置"
+  },
+  "header": {
+    "connected": "后端已连接",
+    "disconnected": "后端已断开",
+    "search": "搜索"
+  },
+  "search": {
+    "placeholder": "搜索电影和剧集…",
+    "typeHint": "请至少输入 2 个字符",
+    "noResults": "未找到结果",
+    "all": "全部",
+    "movies": "电影",
+    "tv": "剧集",
+    "results": "个结果"
+  },
+  "home": {
+    "trendingMovies": "热门电影",
+    "trendingTv": "热门剧集",
+    "popularMovies": "受欢迎的电影",
+    "popularTv": "受欢迎的剧集",
+    "topRated": "高分佳作"
+  },
+  "media": {
+    "trendingNow": "正在流行",
+    "popular": "受欢迎",
+    "topRated": "高分佳作",
+    "watchNow": "立即观看",
+    "moreInfo": "更多信息",
+    "noImage": "无图片"
+  },
+  "drawer": {
+    "play": "播放",
+    "trailer": "预告片",
+    "episodes": "剧集",
+    "cast": "演员",
+    "recommendations": "推荐",
+    "noImage": "无图片",
+    "noOverview": "无简介",
+    "grid": "网格",
+    "list": "列表",
+    "loadError": "无法加载该作品的详情。",
+    "tryAgain": "重试"
+  },
+  "discover": {
+    "title": "发现",
+    "surpriseMe": "随机推荐",
+    "sortBy": "排序方式",
+    "order": "顺序",
+    "yearFrom": "起始年份",
+    "yearTo": "结束年份",
+    "any": "任意",
+    "all": "全部",
+    "movies": "电影",
+    "tvShows": "剧集",
+    "noResults": "未找到结果",
+    "noResultsHint": "请尝试调整筛选条件",
+    "loadError": "无法加载结果。可能是服务器或 TMDB 的临时问题 — 请重试。",
+    "previous": "上一页",
+    "next": "下一页",
+    "page": "第",
+    "goToPage": "跳转到页",
+    "go": "跳转",
+    "sort": {
+      "popularity": "热度",
+      "rating": "评分",
+      "releaseDate": "上映日期",
+      "title": "标题"
+    },
+    "dir": {
+      "highest": "从高到低",
+      "lowest": "从低到高",
+      "newest": "从新到旧",
+      "oldest": "从旧到新",
+      "az": "A–Z",
+      "za": "Z–A"
+    }
+  },
+  "surprise": {
+    "title": "随机推荐",
+    "subtitle": "从各种类型和年代中随机挑选的电影或剧集。",
+    "finding": "正在为你寻找…",
+    "moviePick": "电影推荐",
+    "tvPick": "剧集推荐",
+    "watchNow": "立即观看",
+    "another": "换一个",
+    "copyId": "复制 ID",
+    "copied": "已复制",
+    "backToDiscover": "返回发现",
+    "noPoster": "无海报",
+    "noDescription": "该作品暂无简介。",
+    "votes": "票",
+    "errorNone": "暂无推荐。请重试以获取新的推荐。",
+    "errorGeneric": "目前无法获取推荐。请重试。",
+    "errorCopy": "无法复制 ID，请手动复制。"
+  },
+  "episodes": {
+    "title": "剧集",
+    "newestFirst": "从新到旧",
+    "oldestFirst": "从旧到新",
+    "none": "未找到剧集",
+    "noOverview": "无简介",
+    "season": "季"
+  },
+  "notFound": {
+    "code": "404",
+    "message": "页面未找到",
+    "home": "返回首页"
+  },
+  "common": {
+    "loading": "加载中…",
+    "error": "出了点问题",
+    "reload": "重新加载页面",
+    "retry": "重试"
+  },
+  "footer": {
+    "pages": "页面",
+    "links": "链接",
+    "disclaimer": "免责声明",
+    "copyright": "本网站不托管任何受版权保护的内容。",
+    "streamMovies": "在线观看电影和剧集"
+  },
+  "disclaimer": {
+    "title": "免责声明",
+    "goBack": "返回",
+    "p1": "Spiflix 不在其服务器上托管任何受版权保护的内容。本网站显示的所有媒体内容均来自第三方服务，并通过公开可用的流媒体链接嵌入。",
+    "p2": "本网站仅供教育和个人用途。我们不鼓励也不纵容盗版或未经授权传播受版权保护的材料。",
+    "p3": "所有商标、徽标和品牌名称均为其各自所有者的财产。使用这些名称并不意味着任何认可或关联。",
+    "p4": "如果你认为通过本网站提供的任何内容侵犯了你的版权，请直接联系相应的内容托管方。",
+    "p5": "本服务按“原样”提供，不作任何明示或暗示的保证。本网站运营者不对因使用本服务而产生的任何损害承担责任。"
+  },
+  "error": {
+    "title": "出了点问题",
+    "reload": "重新加载页面"
+  }
+}
