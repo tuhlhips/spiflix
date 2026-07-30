@@ -8,6 +8,7 @@ export interface Source {
   quality: string
   provider: ProviderRef
   audioTracks: AudioTrack[]
+  subtitles?: Subtitle[]
 }
 
 /** Provider reference embedded in source */
@@ -27,6 +28,7 @@ export interface Subtitle {
   url: string
   label: string
   format: SubtitleFormat
+  providerId?: string
 }
 
 export type SubtitleFormat = 'vtt' | 'srt' | 'ass' | 'json'

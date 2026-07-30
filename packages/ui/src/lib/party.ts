@@ -1,7 +1,7 @@
 /**
  * Watch Party client glue. The realtime brain is a standalone Socket.IO server
  * (built separately) that already targets the same CinePro backend
- * (flix.niggamovies.org) spiflix uses, resolves one shared source per room, and
+ * (api.spiflix.online) spiflix uses, resolves one shared source per room, and
  * proxies HLS so every watcher plays the identical stream — which is what makes
  * playback sync actually line up. Here we just speak its protocol.
  */

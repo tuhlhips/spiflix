@@ -8,16 +8,17 @@ import { usePlaybackProgress } from '@/hooks/usePlaybackProgress'
 import { useHistory } from '@/app/providers/history-provider'
 import { usePersistentState } from '@/hooks/useLocalStorage'
 import { useSubtitleSettings, FONT_SIZES, COLORS, BG_OPACITIES, POSITIONS } from '@/hooks/useSubtitleSettings'
-import { sortSources, isHls } from '@/utils/playback'
+import { sortSources, isHls, subtitlesForSource, pickSubtitle } from '@/utils/playback'
+import type { Source, Subtitle } from '@/utils/playback'
 import { fetchSegments, type IntroDBSegment } from '@/services/introdb'
-import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang, languageName, sourceLanguages } from '@/utils/audio'
+import { findPreferredAudioTrack, getPreferredAudioLang, setPreferredAudioLang, languageName } from '@/utils/audio'
 import { usePresenceMeta } from '@/hooks/usePresenceMeta'
 import { useSafeBack } from '@/hooks/useSafeBack'
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, SkipBack, SkipForward, ArrowLeft, List,
   PictureInPicture, PictureInPicture2, Subtitles,
-  HardDrive, Captions, Gauge, Clapperboard, Check,
+  Captions, Gauge, Clapperboard, Check,
   RotateCcw, RotateCw, Monitor, Server,
 } from 'lucide-react'
 import { CustomSubtitles } from './CustomSubtitles'
@@ -42,20 +43,12 @@ interface MediaPlayerProps {
   onToggleEpisodes?: () => void
 }
 
-import type { Source } from '@/utils/playback'
-
-interface Subtitle {
-  url: string
-  label: string
-  format: string
-}
-
 interface AudioTrack {
   language: string
   label: string
 }
 
-type SettingsTab = 'source' | 'quality' | 'speed' | 'subtitles' | 'audio' | 'captions'
+type SettingsTab = 'quality' | 'speed' | 'subtitles' | 'audio' | 'captions'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -85,7 +78,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const [episodeTitle, setEpisodeTitle] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('source')
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('subtitles')
   const [playbackRate, setPlaybackRate] = useState(1)
   const [qualities, setQualities] = useState<{ index: number; height: number; label: string }[]>([])
   const [currentQuality, setCurrentQuality] = useState(-1)
@@ -94,6 +87,8 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
   const autoplayTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const autoplayInterval = useRef<ReturnType<typeof setInterval>>(undefined)
   const [subtitles, setSubtitles] = useState<Subtitle[]>([])
+  const subtitlesRef = useRef<Subtitle[]>([])
+  subtitlesRef.current = subtitles
   const [selectedSubtitle, setSelectedSubtitle] = useState<Subtitle | null>(null)
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
   const [selectedAudioTrack, setSelectedAudioTrack] = useState<AudioTrack | null>(null)
@@ -141,6 +136,13 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
       setLoading(true)
       setError(null)
       setSelectedSource(next)
+      // Pick a subtitle compatible with the new source — clears if none match.
+      setSelectedSubtitle(prev => {
+        if (!prev || prev.providerId !== next.provider?.id) {
+          return pickSubtitle(next, subtitlesRef.current, getPreferredAudioLang()) || null
+        }
+        return prev
+      })
       return true
     }
     setError(t('errors.playback_error'))
@@ -171,9 +173,9 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         if (cancelled) return
         setSources(data.sources || [])
         setSubtitles(data.subtitles || [])
-        setSelectedSubtitle(null)
         setSelectedAudioTrack(null)
         // Rank all sources once, reset failover bookkeeping, start on the best.
+        const allSubs = data.subtitles || []
         const ordered = sortSources(data.sources || [], getPreferredAudioLang())
         orderedSourcesRef.current = ordered
         failedSourceUrls.current = new Set()
@@ -182,8 +184,10 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
         if (preferred) {
           setAudioTracks(preferred.audioTracks || [])
           setSelectedSource(preferred)
+          setSelectedSubtitle(pickSubtitle(preferred, allSubs, getPreferredAudioLang()) || null)
         } else {
           setAudioTracks([])
+          setSelectedSubtitle(null)
           setError(t('errors.no_sources'))
         }
       })
@@ -1109,7 +1113,18 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                             return (
                               <button
                                 key={src.url}
-                                onClick={() => { manualSourceRef.current = true; setError(null); setSelectedSource(src); setSourcesOpen(false) }}
+                                onClick={() => {
+                                  manualSourceRef.current = true
+                                  setError(null)
+                                  setSelectedSource(src)
+                                  setSourcesOpen(false)
+                                  setSelectedSubtitle(prev => {
+                                    if (!prev || prev.providerId !== src.provider?.id) {
+                                      return pickSubtitle(src, subtitlesRef.current, getPreferredAudioLang()) || null
+                                    }
+                                    return prev
+                                  })
+                                }}
                                 className={cn(
                                   'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/6',
                                   isSelected && 'bg-accent/12',
@@ -1168,7 +1183,6 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                           not a menu of actions. */}
                       <div className="flex border-b border-white/10" role="tablist" aria-label="Player settings">
                         {([
-                          { id: 'source' as SettingsTab, icon: HardDrive },
                           { id: 'subtitles' as SettingsTab, icon: Captions },
                           { id: 'audio' as SettingsTab, icon: Volume2 },
                           { id: 'quality' as SettingsTab, icon: Clapperboard },
@@ -1188,63 +1202,18 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                             )}
                           >
                             <Icon className="h-3.5 w-3.5" />
-                            {t(`settings.${id === 'captions' ? 'style' : id}`)}
+                            {/* Labels live under controls.* — already translated in every
+                                locale, unlike the settings.* section which only had `source`. */}
+                            {t(`controls.${id === 'captions' ? 'style' : id}`)}
                           </button>
                         ))}
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 overflow-y-auto p-2 min-h-0 max-h-64" role="tabpanel">
-                        {/* Source */}
-                        {settingsTab === 'source' && (
-                          <div className="space-y-1">
-                            {sources.length === 0 ? (
-                              <p className="text-xs text-white/40 px-2 py-1">{t('settings.no_sources')}</p>
-                            ) : (
-                              (() => {
-                                const grouped = sources.reduce<Record<string, typeof sources>>((acc, s) => {
-                                  const provider = s.provider.name
-                                  if (!acc[provider]) acc[provider] = []
-                                  acc[provider].push(s)
-                                  return acc
-                                }, {})
-                                return Object.entries(grouped).map(([provider, providerSources]) => (
-                                  <div key={provider} className="mb-3 last:mb-0">
-                                    <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">{provider}</div>
-                                    <div className="mt-0.5 space-y-0.5">
-                                      {providerSources.map((s, i) => {
-                                        const isSelected = selectedSource === s
-                                        const langs = sourceLanguages(s.audioTracks)
-                                        // Providers report quality inconsistently ("1080" vs
-                                        // "1080p" vs "Auto") — normalize bare numbers for display.
-                                        const qualityLabel = /^\d+$/.test(s.quality) ? `${s.quality}p` : s.quality
-                                        return (
-                                          <button
-                                            key={`${s.provider.id}-${i}`}
-                                            onClick={() => { manualSourceRef.current = true; setError(null); setSelectedSource(s); setShowSettings(false) }}
-                                            className={cn(
-                                              'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                                              isSelected ? 'bg-primary/20 text-primary' : 'text-white/70 hover:bg-white/10',
-                                            )}
-                                          >
-                                            <span className="flex min-w-0 items-center gap-1.5">
-                                              <span className="truncate font-medium">{langs || `Source ${i + 1}`}</span>
-                                              <span className="shrink-0 text-white/40">{qualityLabel}</span>
-                                              <span className="shrink-0 text-[10px] uppercase tracking-wide text-white/30">{s.type}</span>
-                                            </span>
-                                            {isSelected && <Check className="h-3 w-3 shrink-0" />}
-                                          </button>
-                                        )
-                                      })}
-                                    </div>
-                                  </div>
-                                ))
-                              })()
-                            )}
-                          </div>
-                        )}
+                        {/* Source picking lives in the control-bar chip, not here. */}
 
-                        {/* Subtitles */}
+                        {/* Subtitles — filtered to match current source's provider */}
                         {settingsTab === 'subtitles' && (
                           <div className="space-y-0.5">
                             <button
@@ -1257,10 +1226,12 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                               <span>{t('settings.off')}</span>
                               {!selectedSubtitle && <Check className="h-3 w-3" />}
                             </button>
-                            {subtitles.length === 0 ? (
-                              <p className="text-xs text-white/40 px-2 py-1">{t('settings.no_subtitles')}</p>
-                            ) : (
-                              subtitles.map((sub, i) => (
+                            {(() => {
+                              const compatible = selectedSource ? subtitlesForSource(selectedSource, subtitles) : subtitles
+                              if (compatible.length === 0) {
+                                return <p className="text-xs text-white/40 px-2 py-1">{t('settings.no_subtitles')}</p>
+                              }
+                              return compatible.map((sub, i) => (
                                 <button
                                   key={i}
                                   onClick={() => { setSelectedSubtitle(sub); setShowSettings(false) }}
@@ -1273,7 +1244,7 @@ export function MediaPlayer({ tmdbId, type, season, episode, onToggleEpisodes }:
                                   {selectedSubtitle === sub && <Check className="h-3 w-3" />}
                                 </button>
                               ))
-                            )}
+                            })()}
                           </div>
                         )}
 

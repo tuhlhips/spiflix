@@ -123,6 +123,19 @@ async function assertPublicHost(rawUrl: string): Promise<void> {
   if (blocked) throw new Error('Blocked non-public host')
 }
 
+/**
+ * Base URL that signed proxy URLs are stamped with.
+ *
+ * Single source of truth for all three call sites (providers and both source
+ * routes). They previously each read process.env.PUBLIC_URL inline, so a split
+ * stream host would have had to be threaded through three places and any miss
+ * would silently emit URLs on the wrong hostname — the kind of drift that only
+ * shows up as a playback failure in production.
+ */
+export function proxyBase(): string {
+  return env.proxyPublicUrl || `http://localhost:${env.port}`
+}
+
 /** Build a tamper-proof proxy URL. Only server-created upstream URLs can be fetched. */
 export function createProxyUrl(url: string, headers: Record<string, string> = {}, base = '', expiresAt = Date.now() + Math.max(60, env.proxy.tokenTtlSeconds) * 1000): string {
   const data = Buffer.from(JSON.stringify({ url, headers, expiresAt })).toString('base64url')
@@ -215,7 +228,19 @@ export async function proxyRequest(data: string, { range, signature }: ProxyRequ
 
     let manifest: string | null = null
     if ((isHls(payload.url, upstream) || finalUrl.includes('.m3u8')) && upstream.body) {
-      manifest = await upstream.text()
+      const text = await upstream.text()
+      // A .m3u8 URL is not proof of a playlist. Upstreams sometimes answer 200
+      // with an error page instead (Icefy leaks a 403 page into its master).
+      // Unchecked, every line of that HTML gets rewritten into a proxy URL and
+      // handed back as a valid-looking manifest, so the player buffers garbage
+      // and never fails over. Require the real header before rewriting.
+      if (!text.trimStart().startsWith('#EXTM3U')) {
+        return new Response(
+          JSON.stringify({ error: `Upstream did not return a playlist: ${new URL(payload.url).host}` }),
+          { status: 502, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      manifest = text
     } else if (upstream.body && /^text\/(html|plain)/i.test(upstream.headers.get('content-type') ?? '')) {
       // Some hosts serve manifests with a text/html content-type and no .m3u8
       // anywhere in the URL (kriss424did again). Sniff the body — text

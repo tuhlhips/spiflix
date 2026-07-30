@@ -1,9 +1,17 @@
+export interface Subtitle {
+  url: string
+  label: string
+  format: string
+  providerId?: string
+}
+
 export interface Source {
   quality: string
   type: string
   url: string
   provider: { id: string; name: string }
   audioTracks?: Array<{ language: string; label: string }>
+  subtitles?: Subtitle[]
 }
 
 const ENGLISH_CODES = new Set(['en', 'eng', 'english', 'en-us', 'en-gb', 'en-au', 'en-ca'])
@@ -16,11 +24,22 @@ const ENGLISH_CODES = new Set(['en', 'eng', 'english', 'en-us', 'en-gb', 'en-au'
  */
 const PROVIDER_PRIORITY: Record<string, number> = {
   vidnest: 0,
-  vidsrc: 1,
   icefy: 2,
   cinesu: 3,
   vidrock: 4,
   vixsrc: 5,
+  // Last resort: VidLink resolves progressive MP4s rather than an adaptive
+  // ladder, so it tends to land lower-resolution than the HLS scrapers, and it
+  // reports no audio tracks (so it can never win the language bucket). Listed
+  // explicitly — without an entry it would inherit the default rank of 3 and
+  // outrank VixSrc.
+  vidlink: 6,
+  // Demoted from rank 1: VidSrc's final hop is behind a Cloudflare Turnstile
+  // challenge, so it currently resolves nothing. Kept listed rather than
+  // deleted — an unlisted provider inherits rank 3 and would outrank VixSrc the
+  // moment the gate lifts, silently reinstating an unproven source ahead of the
+  // workhorse. Promote it again once it's confirmed playing.
+  vidsrc: 7,
 }
 const providerRank = (source: Source): number =>
   PROVIDER_PRIORITY[source.provider?.id] ?? 3
@@ -77,4 +96,24 @@ export function isHls(source: Source): boolean {
 
 export function isDash(source: Source): boolean {
   return source.type === 'dash' || source.url?.includes('.mpd')
+}
+
+/** Filter subtitles that belong to the same provider as the given source. */
+export function subtitlesForSource(source: Source, allSubtitles: Subtitle[]): Subtitle[] {
+  const providerId = source.provider?.id
+  if (!providerId) return allSubtitles
+  return allSubtitles.filter(sub => !sub.providerId || sub.providerId === providerId)
+}
+
+/** Pick the best matching subtitle for a source, preferring the given language. */
+export function pickSubtitle(source: Source, allSubtitles: Subtitle[], preferredLang: string): Subtitle | undefined {
+  const compatible = subtitlesForSource(source, allSubtitles)
+  if (compatible.length === 0) return undefined
+  const lang = preferredLang.toLowerCase().split('-')[0]
+  const match = compatible.find(sub => {
+    const label = sub.label.toLowerCase()
+    if (lang === 'en') return label === 'english' || label === 'en' || label.startsWith('en')
+    return label.startsWith(lang)
+  })
+  return match || compatible[0]
 }

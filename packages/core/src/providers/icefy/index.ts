@@ -61,10 +61,20 @@ export default class IcefyProvider extends BaseProvider {
       const data = await res.json() as { stream?: string }
       if (!data?.stream) return this.emptyResult([this.errorDiagnostic('No stream URL returned')])
 
+      // Icefy's master is frequently malformed: no #EXTM3U, no
+      // #EXT-X-STREAM-INF, and real variant URLs interleaved with fragments of
+      // an HTML 403 page for renditions its origin failed to build. Handed to
+      // the player as-is, that buffered a few seconds and then stalled. Resolve
+      // past it here so the player receives a real playlist.
+      const playlist = await this.resolvePlayablePlaylist(data.stream)
+      if (!playlist) {
+        return this.emptyResult([this.errorDiagnostic('Master playlist contained no usable variant')])
+      }
+
       return {
         sources: [
           {
-            url: this.createProxyUrl(data.stream, this.headers),
+            url: this.createProxyUrl(playlist, this.headers),
             type: 'hls',
             // Nominal, not probed — display-formatted like other providers.
             quality: '1080p',
@@ -77,6 +87,56 @@ export default class IcefyProvider extends BaseProvider {
       }
     } catch (err: any) {
       return this.emptyResult([this.errorDiagnostic(err.message)])
+    }
+  }
+
+  /**
+   * Return a playlist URL the player can actually consume.
+   *
+   * A well-formed response is used as-is, so a healthy upstream keeps its full
+   * adaptive ladder. Only when the master is malformed do we salvage it by
+   * taking the first plausible variant URI and discarding the HTML noise — that
+   * costs adaptive bitrate for this provider, which beats not playing at all.
+   */
+  private async resolvePlayablePlaylist(masterUrl: string): Promise<string | null> {
+    try {
+      const res = await fetch(masterUrl, {
+        headers: this.headers,
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (!res.ok) return null
+
+      const body = await res.text()
+      if (body.trimStart().startsWith('#EXTM3U')) return masterUrl
+
+      for (const line of body.split('\n')) {
+        const value = line.trim()
+        // Skip tags, blank lines, and the leaked error-page markup.
+        if (!value || value.startsWith('#') || value.startsWith('<')) continue
+        if (!/\.m3u8(\?|$)/i.test(value)) continue
+
+        let candidate: string
+        try {
+          candidate = new URL(value, masterUrl).toString()
+        } catch {
+          continue
+        }
+
+        // Verify before offering it. When Icefy's origin is failing, the
+        // variants carry the same corruption as the master (segment names built
+        // from lines of a 403 page), so an unverified pick would put a source in
+        // the list that can only fail — costing the player a failover hop.
+        const probe = await fetch(candidate, {
+          headers: this.headers,
+          signal: AbortSignal.timeout(10_000),
+        }).catch(() => null)
+        if (!probe?.ok) continue
+        const probeBody = await probe.text().catch(() => '')
+        if (probeBody.trimStart().startsWith('#EXTM3U')) return candidate
+      }
+      return null
+    } catch {
+      return null
     }
   }
 

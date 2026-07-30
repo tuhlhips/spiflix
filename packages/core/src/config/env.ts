@@ -58,4 +58,20 @@ export const env = {
   },
 
   publicUrl: optionalEnv('PUBLIC_URL', ''),
+
+  /**
+   * Base URL stamped into signed proxy URLs, when stream traffic should leave by
+   * a different hostname than the JSON API.
+   *
+   * The two have opposite needs. The API wants to sit behind Cloudflare — small
+   * cacheable JSON, DDoS protection worth having. Video does not: proxying it
+   * through Cloudflare runs against the ToS restriction on disproportionate
+   * non-HTML content, and it adds a hop to every segment. Pointing this at a
+   * DNS-only host sends media straight to the origin while the API stays
+   * proxied.
+   *
+   * Falls back to PUBLIC_URL, so leaving it unset keeps the single-host setup
+   * behaving exactly as before.
+   */
+  proxyPublicUrl: optionalEnv('PROXY_PUBLIC_URL', '') || optionalEnv('PUBLIC_URL', ''),
 } as const

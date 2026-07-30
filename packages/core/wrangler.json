@@ -14,6 +14,6 @@
     "CACHE_TYPE": "memory",
     "PROXY_ALLOWED_HOSTS": "vixsrc.to,vix-content.net,vsembed.ru,cloudnestra.com,neonhorizonworkshops.com,wanderlynest.com,orchidpixelgardens.com",
     "CORS_ORIGIN": "*",
-    "PUBLIC_URL": "https://flix.niggamovies.org"
+    "PUBLIC_URL": "https://api.spiflix.online"
   }
 }

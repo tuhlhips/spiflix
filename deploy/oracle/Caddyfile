@@ -1,0 +1,54 @@
+# Caddy handles ONLY the stream host.
+#
+# api.spiflix.online keeps its existing cloudflared tunnel (moved to this VM):
+# it stays Cloudflare-proxied for caching and DDoS protection, needs no open
+# ports, and needs no certificate. Video is the part that should not go through
+# Cloudflare — the ToS restricts serving disproportionate non-HTML content, and
+# every segment would take an extra hop. So streams get their own DNS-only
+# hostname pointing straight here.
+#
+# Both hostnames reach the same Node process on :3000. The split is purely about
+# which path the bytes take to get there.
+
+stream.spiflix.online {
+	reverse_proxy 127.0.0.1:3000 {
+		# Flush immediately rather than buffering. HLS playback is a long series
+		# of small sequential reads; response buffering adds startup latency to
+		# every segment and can stall a live-ish manifest refresh.
+		flush_interval -1
+
+		# Long enough for a full segment read on a slow client. Deliberately not
+		# unlimited, so a hung upstream connection is eventually reclaimed.
+		transport http {
+			response_header_timeout 30s
+			read_timeout 5m
+		}
+	}
+
+	# The proxy already sets permissive CORS and Range headers itself
+	# (services/proxy.ts makeHeaders), so Caddy must not add or override them.
+
+	encode {
+		# Never gzip media. Segments are already compressed; re-encoding burns
+		# CPU on a 1/8-OCPU box for no size win and breaks byte-range math.
+		match header Content-Type text/*
+		gzip
+	}
+
+	log {
+		output file /var/log/caddy/stream.log {
+			roll_size 20mb
+			roll_keep 3
+		}
+		# Signed proxy URLs carry the upstream URL in the query string; keeping
+		# full URIs in logs would persist provider CDN links on disk.
+		format filter {
+			wrap console
+			fields {
+				request>uri query {
+					replace REDACTED
+				}
+			}
+		}
+	}
+}

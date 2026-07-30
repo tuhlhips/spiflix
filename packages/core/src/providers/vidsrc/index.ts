@@ -61,6 +61,17 @@ export default class VidSrcProvider extends BaseProvider {
       const thirdHtml = await this.fetchPage(thirdUrl)
       if (!thirdHtml) return this.emptyResult([this.errorDiagnostic('Failed to fetch final stream page')])
 
+      // The third hop now answers 200 with a Cloudflare Turnstile challenge in
+      // place of the player, unconditionally — no combination of Referer, UA or
+      // cookie jar gets the real page. Solving it is bot-detection bypass, which
+      // we don't do, so report the gate plainly instead of blaming the
+      // extractor: "Failed to extract m3u8 URLs" sent the last debugging pass
+      // hunting a drifted regex that was never the problem. If VidSrc ever drops
+      // the challenge this resolves normally again with no code change.
+      if (/class=["'][^"']*cf-turnstile|challenges\.cloudflare\.com\/turnstile/i.test(thirdHtml)) {
+        return this.emptyResult([this.errorDiagnostic('Blocked by a Cloudflare Turnstile challenge')])
+      }
+
       const m3u8Urls = this.extractM3u8Urls(thirdHtml)
       if (!m3u8Urls || m3u8Urls.length === 0) {
         return this.emptyResult([this.errorDiagnostic('Failed to extract m3u8 URLs')])

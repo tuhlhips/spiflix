@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { sourceCache } from '../services/cache.js'
+import { proxyBase } from '../services/proxy.js'
 
 function cacheResult(key: string, result: { expiresAt: string }): void {
   // Refresh before a provider token expires; never keep playback URLs longer
@@ -34,7 +35,7 @@ export async function sourceRoutes(app: FastifyInstance) {
       // TODO: resolve title/year from TMDB before passing to providers
       const result = await app.registry.resolveSources(
         { tmdbId: id, title: '', imdbId: null, releaseYear: null, type: 'movie' },
-        process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
+        proxyBase(),
       )
 
       request.log.info(`movie:${id} → ${result.sources.length} sources, ${result.diagnostics.length} diagnostics`)
@@ -77,7 +78,7 @@ export async function sourceRoutes(app: FastifyInstance) {
     try {
       const result = await app.registry.resolveSources(
         { tmdbId: id, title: '', imdbId: null, releaseYear: null, type: 'tv', season: s, episode: e },
-        process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`,
+        proxyBase(),
       )
 
       cacheResult(cacheKey, result)

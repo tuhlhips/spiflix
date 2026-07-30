@@ -1,7 +1,48 @@
-import type { IProvider, ProviderHealth, ProviderMediaObject, SourceResponse, Source, Subtitle, Diagnostic } from '@spiflix/shared'
+import type { IProvider, ProviderHealth, ProviderMediaObject, ProviderResult, SourceResponse, Source, Subtitle, Diagnostic } from '@spiflix/shared'
 import type { BaseProvider } from './base.js'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
+
+/**
+ * Backstop for a provider that never settles. Deliberately generous — every
+ * provider already bounds its own fetches well below this, so a healthy one
+ * never reaches it. Without it, a single hung scraper holds the whole response
+ * open and every other provider's sources are lost with it.
+ */
+const PROVIDER_TIMEOUT_MS = 20_000
+
+/**
+ * Reject if `promise` hasn't settled in time. This frees the *response*; it
+ * can't cancel the provider's in-flight request (the IProvider contract takes
+ * no abort signal), which just completes unobserved.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms)
+    promise.then(
+      value => { clearTimeout(timer); resolve(value) },
+      error => { clearTimeout(timer); reject(error) },
+    )
+  })
+}
+
+/**
+ * Providers are third-party scrapers, so treat their output as untrusted: a
+ * malformed payload (missing arrays, entries with no URL) would otherwise
+ * throw while tagging and take that provider's whole result down — or worse,
+ * hand the player a source it can never load.
+ */
+function normalizeResult(result: ProviderResult | undefined): ProviderResult {
+  const usable = (entry: { url?: unknown }) =>
+    entry != null && typeof entry.url === 'string' && entry.url.length > 0
+
+  return {
+    sources: Array.isArray(result?.sources) ? result.sources.filter(usable) : [],
+    subtitles: Array.isArray(result?.subtitles) ? result.subtitles.filter(usable) : [],
+    diagnostics: Array.isArray(result?.diagnostics) ? result.diagnostics : [],
+    expiresAt: result?.expiresAt,
+  }
+}
 
 /**
  * Provider registry — discovers, registers, and executes providers.
@@ -63,20 +104,56 @@ export class ProviderRegistry {
     publicUrl: string,
   ): Promise<SourceResponse> {
     const startTime = Date.now()
+    // Every provider is resolved in full isolation: it gets its own timeout and
+    // its own catch, so a provider that hangs, throws, or returns garbage costs
+    // only its own sources. The others still return normally.
     const results = await Promise.allSettled(
       this.getAll().map(async (provider) => {
         const start = Date.now()
-        const result = media.type === 'movie'
-          ? await provider.getMovieSources(media)
-          : await provider.getTVSources(media)
-        const elapsed = Date.now() - start
 
-        // Tag each source with provider info
-        result.sources.forEach(s => {
-          s.provider = { id: provider.config.id, name: provider.config.name }
-        })
+        // Stamp provenance onto everything a provider returns. Diagnostics get
+        // it too: the merged response otherwise shows bare strings like
+        // "API returned 500" with no way to tell which scraper is broken.
+        const tag = (result: ProviderResult): ProviderResult => {
+          result.sources.forEach(s => {
+            s.provider = { id: provider.config.id, name: provider.config.name }
+          })
+          result.subtitles.forEach(sub => {
+            sub.providerId = provider.config.id
+          })
+          result.diagnostics.forEach(d => {
+            d.message = `${provider.config.name}: ${d.message}`
+          })
+          return result
+        }
 
-        return { provider, result, elapsed }
+        try {
+          const raw = await withTimeout(
+            media.type === 'movie'
+              ? provider.getMovieSources(media)
+              : provider.getTVSources(media),
+            PROVIDER_TIMEOUT_MS,
+            provider.config.name,
+          )
+          return { provider, result: tag(normalizeResult(raw)), elapsed: Date.now() - start }
+        } catch (err: any) {
+          const message = err?.message ?? 'Unknown error'
+          console.warn(`[Registry] ${provider.config.name} failed: ${message}`)
+          return {
+            provider,
+            result: tag(normalizeResult({
+              sources: [],
+              subtitles: [],
+              diagnostics: [{
+                code: 'PROVIDER_ERROR' as const,
+                message,
+                field: '',
+                severity: 'error' as const,
+              }],
+            })),
+            elapsed: Date.now() - start,
+          }
+        }
       }),
     )
 
@@ -104,8 +181,13 @@ export class ProviderRegistry {
       }
     }
 
-    // Add partial scrape diagnostic if not all providers succeeded
-    const succeeded = results.filter(r => r.status === 'fulfilled').length
+    // Add partial scrape diagnostic if not all providers succeeded. Failures
+    // now resolve (tagged with a diagnostic) rather than reject, so settle
+    // status no longer distinguishes them — count providers that actually
+    // returned something playable instead.
+    const succeeded = results.filter(
+      r => r.status === 'fulfilled' && r.value.result.sources.length > 0,
+    ).length
     const total = results.length
     if (succeeded < total) {
       diagnostics.push({

@@ -41,6 +41,7 @@ function applyCuePosition(cue: VTTCue, position: SubtitleSettings['position']) {
 export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
   const trackRef = useRef<TextTrack | null>(null)
   const [settings] = useSubtitleSettings()
+  const abortRef = useRef<AbortController | null>(null)
   // Read inside the load effect without making it re-fetch the VTT file
   // whenever settings change.
   const positionRef = useRef(settings.position)
@@ -56,9 +57,12 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
 
     async function load() {
       try {
-        const res = await fetch(url)
+        abortRef.current?.abort()
+        const ctrl = new AbortController()
+        abortRef.current = ctrl
+        const res = await fetch(url, { signal: ctrl.signal })
         const text = await res.text()
-        if (cancelled) return
+        if (cancelled || ctrl.signal.aborted) return
 
         let cues: { start: number; end: number; text: string }[]
 
@@ -82,10 +86,10 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
           // an episode would drop every caption.
           const texts: string[] = []
           const BATCH = 8
-          for (let i = 0; i < segments.length && !cancelled; i += BATCH) {
+          for (let i = 0; i < segments.length && !cancelled && !ctrl.signal.aborted; i += BATCH) {
             const batch = await Promise.allSettled(
               segments.slice(i, i + BATCH).map(async seg => {
-                const r = await fetch(new URL(seg, url).toString())
+                const r = await fetch(new URL(seg, url).toString(), { signal: ctrl.signal })
                 if (!r.ok) throw new Error(`segment ${r.status}`)
                 return r.text()
               }),
@@ -129,6 +133,8 @@ export function CustomSubtitles({ url, videoRef }: CustomSubtitlesProps) {
     load()
     return () => {
       cancelled = true
+      abortRef.current?.abort()
+      abortRef.current = null
       if (trackRef.current) {
         trackRef.current.mode = 'disabled'
         trackRef.current = null

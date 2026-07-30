@@ -1,0 +1,49 @@
+[Unit]
+Description=Spiflix core API and stream proxy
+Documentation=https://github.com/spiii/spiflix
+After=network-online.target
+Wants=network-online.target
+
+# Must live in [Unit] — systemd >= 229 ignores this under [Service], which would
+# leave the default limit (5 starts / 10s) in force and let the unit give up for
+# good after a burst of quick failures. That is the exact failure mode this whole
+# migration exists to eliminate.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ubuntu
+
+# MUST be packages/core. config/env.ts loads dotenv from process.cwd(), so
+# starting anywhere else silently gets no .env — the server then dies on the
+# required TMDB_API_KEY / PROXY_SIGNING_SECRET checks rather than running
+# misconfigured, but the failure reads as "missing env" with no hint that the
+# real cause is the working directory.
+WorkingDirectory=/opt/spiflix/packages/core
+ExecStart=/usr/bin/node /opt/spiflix/packages/core/dist/server.js
+
+# The whole point of moving off the laptop: it comes back by itself.
+Restart=always
+RestartSec=3
+
+# Cap the heap so an OOM kills only this unit (which then restarts) instead of
+# letting the kernel reap sshd on a 1 GB E2.1.Micro. Raise to 2048 on ARM.
+Environment=NODE_OPTIONS=--max-old-space-size=384
+Environment=NODE_ENV=production
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spiflix-core
+
+# Hardening. ProtectSystem=strict makes / read-only; the app only ever writes to
+# its own tmp, so nothing needs ReadWritePaths.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
